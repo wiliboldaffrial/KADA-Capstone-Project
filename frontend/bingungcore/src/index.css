@@ -1,13 +1,20 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: 'Kollektif';
+    src: url('https://fontlibrary.org/assets/fonts/kollektif/15f2bdf9bbb50647f894a865a6a3b839/ab03333aab3754e0c8108928b8be7341/Kollektif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Kollektif';
+    src: url('https://fontlibrary.org/assets/fonts/kollektif/15f2bdf9bbb50647f894a865a6a3b839/477a673c242e8d828c4344d75ab2f741/Kollektif-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+body {
+    font-family: 'Kollektif', sans-serif;
 }
