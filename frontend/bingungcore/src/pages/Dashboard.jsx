@@ -1,6 +1,8 @@
 import React, {useState} from "react";
 import SideBar from "../components/SideBar";
 import { Outlet } from 'react-router-dom';
+import PatientChartDay from "../components/PatientChartDay";
+import PatientBarChart from "../components/PatientBarMonth";
 
 const Dashboard = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -20,7 +22,6 @@ const Dashboard = () => {
                                 <span className="text-sm text-gray-500 pr-3">1 minute ago</span>
                                 <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                             </div>
-                            
                         </div>
                     </div>
                 </div>
@@ -89,20 +90,28 @@ const Dashboard = () => {
                                 <span className="text-blue-500">Finished</span>
                                 </li>
                             </ul>
+                        </div>
                     </div>
-                    </div>
+
                     {/* Graphs */}
-                    <div className="">
-                        <div className="col-span-1 grid grid-cols-1 gap-4">
-                            <div className="bg-blue-600 text-white rounded-md p-4">
-                                <h4 className="font-semibold mb-2">Patient per Day</h4>
-                                <div className="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
-                            </div>
-                            <div className="bg-white rounded-md shadow p-4">
-                                <h4 className="font-semibold mb-2">Patient per Month</h4>
-                                <div className="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                    <div className="flex flex-col gap-4">
+                        
+                        {/* Card 1 */}
+                        <div className="bg-blue-600 text-white rounded-md p-4 flex flex-col flex-1">
+                            <h4 className="font-semibold mb-2">Patient per Day</h4>
+                            <div className="flex-1">
+                                <PatientChartDay />
                             </div>
                         </div>
+
+                        {/* Card 2 */}
+                        <div className="bg-white rounded-md shadow p-4 flex flex-col flex-1">
+                            <h4 className="font-semibold mb-2">Patient per Month</h4>
+                            <div className="flex-1">
+                                <PatientBarChart />
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
