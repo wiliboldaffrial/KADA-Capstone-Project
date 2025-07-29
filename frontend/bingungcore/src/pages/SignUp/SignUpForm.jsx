@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "../../components/AppHeader";
 
 // Component for the Sign Up page
 const SignUpForm = ({ onBack }) => {

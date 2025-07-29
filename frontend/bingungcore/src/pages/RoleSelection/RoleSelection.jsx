@@ -1,5 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 // Component for the first step: Role Selection
 const RoleSelection = ({ onSelectRole, onGoToSignUp }) => {

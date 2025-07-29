@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import RoleSelection from './pages/RoleSelection';
-import LoginForm from './pages/LoginForm';
-import SignUpForm from './pages/SignUpForm';
+import RoleSelection from './pages/RoleSelection/RoleSelection';
+import LoginForm from './pages/Login/LoginForm';
+import SignUpForm from './pages/SignUp/SignUpForm';
 
 // Main App Component
 export default function App() {
