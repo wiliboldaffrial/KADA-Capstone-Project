@@ -1,8 +1,12 @@
 import React from "react";
+import SideBar from "../components/SideBar";
+import { Outlet } from 'react-router-dom';
 
 const Dashboard = () => {
     return (
         <>
+        <div className="flex min-h-screen">
+            <SideBar/>
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                 <div class="flex justify-between items-center">
                     <div class="border rounded-full px-4 py-2 w-full">
@@ -98,6 +102,7 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+        </div>
         </>
     )
 }

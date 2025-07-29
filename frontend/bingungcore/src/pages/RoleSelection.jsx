@@ -9,6 +9,8 @@ const RoleSelection = () => {
     const roles = ['Admin/Receptionist', 'Nurse', 'Doctor'];
 
     const handleSelectRole = (role) => {
+        localStorage.setItem('role', role);
+        console.log(localStorage.getItem('role'));
         navigate('/login');
     }
 
@@ -26,7 +28,7 @@ const RoleSelection = () => {
                         {roles.map((role) => (
                             <button
                                 key={role}
-                                onClick={handleSelectRole}
+                                onClick={() => handleSelectRole(role)}
                                 className="w-full text-white py-3 px-4 rounded-full font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#045ae2]"
                                 style={{ fontFamily: 'Kollektif, sans-serif', backgroundColor: '#045ae2' }}
                             >
