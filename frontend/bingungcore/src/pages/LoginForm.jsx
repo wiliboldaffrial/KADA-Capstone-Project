@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react"; // # Import useEffect
+import { useNavigate } from 'react-router-dom';
 import AppHeader from "../components/AppHeader";
 
 // Component for the second step: Email and Password Login
-const LoginForm = ({ role, onBack }) => {
+const LoginForm = () => {
+    const navigate = useNavigate();
+    const role = localStorage.getItem('role');
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -19,6 +23,10 @@ const LoginForm = ({ role, onBack }) => {
   const [isLoading, setIsLoading] = useState(false); // # Indicates if an API call is in progress
   const [submissionMessage, setSubmissionMessage] = useState(""); // # Message after submission (success/error)
   const [isSuccess, setIsSuccess] = useState(false); // # To style submission message
+
+    const handleReturnToRoleSelection = () => {
+        navigate('/');
+    }
 
   // Function to validate the form fields
   const validateForm = () => {
@@ -90,6 +98,7 @@ const LoginForm = ({ role, onBack }) => {
           // # received from the backend here and then redirect the user to a protected route.
           // # Example: localStorage.setItem('authToken', data.token);
           // # Example: setTimeout(() => window.location.href = '/dashboard', 2000);
+          navigate('/dashboard');
         } else {
           // # Handle backend errors (e.g., invalid credentials, user not found)
           setSubmissionMessage(`Login failed: ${data.message || "Invalid email or password."}`);
@@ -116,58 +125,59 @@ const LoginForm = ({ role, onBack }) => {
   const isFormValid = email.trim() && password.trim() && !emailError && !passwordError;
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="relative text-center">
-        <AppHeader />
-      </div>
-      <div>
-        <p className="text-center text-xl text-gray-700 mt-8" style={{ fontFamily: "Kollektif, sans-serif" }}>
-          {role}
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => setEmailTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${emailError && (emailTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {emailError && (emailTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onBlur={() => setPasswordTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${passwordError && (passwordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {passwordError && (passwordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
-          </div>
+    <div className="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+        <div className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md">
+            <div className="w-full max-w-sm mx-auto">
+            <div className="relative text-center">
+                <AppHeader subtitle={`Welcome, ${role}!`}/>
+            </div>
+            <div>
+                <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div>
+                    <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setEmailTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${emailError && (emailTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {emailError && (emailTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+                </div>
+                <div>
+                    <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => setPasswordTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${passwordError && (passwordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {passwordError && (passwordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
+                </div>
 
-          {/* Submission Message */}
-          {submissionMessage && <p className={`text-center text-sm mt-2 ${isSuccess ? "text-green-600" : "text-red-600"}`}>{submissionMessage}</p>}
+                {/* Submission Message */}
+                {submissionMessage && <p className={`text-center text-sm mt-2 ${isSuccess ? "text-green-600" : "text-red-600"}`}>{submissionMessage}</p>}
 
-          <button
-            type="submit"
-            disabled={!isFormValid || isLoading} // Disable button if not valid or loading
-            className="w-full text-white py-3 px-4 rounded-full font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#045ae2] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: "Kollektif, sans-serif", backgroundColor: "#045ae2" }}
-          >
-            {isLoading ? "Logging In..." : "Login"} {/* # Show loading text */}
-          </button>
-        </form>
-        <p className="text-center mt-4">
-          <button onClick={onBack} className="font-semibold underline" style={{ fontFamily: "Kollektif, sans-serif", color: "#045ae2" }}>
-            Back
-          </button>
-        </p>
-      </div>
+                <button
+                    type="submit"
+                    disabled={!isFormValid || isLoading} // Disable button if not valid or loading
+                    className="w-full text-white py-3 px-4 rounded-full font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#045ae2] disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: "Kollektif, sans-serif", backgroundColor: "#045ae2" }}
+                >
+                    {isLoading ? "Logging In..." : "Login"} {/* # Show loading text */}
+                </button>
+                </form>
+                <p className="text-center mt-4">
+                <button onClick={handleReturnToRoleSelection} className="font-semibold underline" style={{ fontFamily: "Kollektif, sans-serif", color: "#045ae2" }}>
+                    Back
+                </button>
+                </p>
+            </div>
+            </div>
+        </div>
     </div>
   );
 };

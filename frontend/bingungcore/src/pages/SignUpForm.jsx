@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 import AppHeader from "../components/AppHeader";
 
 // Component for the Sign Up page
-const SignUpForm = ({ onBack }) => {
+const SignUpForm = () => {
+
+    const navigate = useNavigate();
+
   // State for form inputs
   const [role, setRole] = useState("");
   const [name, setName] = useState("");
@@ -31,6 +35,10 @@ const SignUpForm = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(false); // # Indicates if an API call is in progress
   const [submissionMessage, setSubmissionMessage] = useState(""); // # Message after submission (success/error)
   const [isSuccess, setIsSuccess] = useState(false); // # To style submission message
+
+    const handleReturnToRoleSelection = () => {
+        navigate('/');
+    }
 
   // Function to validate all form fields
   const validateForm = () => {
@@ -171,6 +179,7 @@ const SignUpForm = ({ onBack }) => {
           console.log("Registration successful:", data);
           // # In a real app, you'd redirect the user or show a success page
           // # Example: setTimeout(() => onBack(), 2000); // Go back to login after 2 seconds
+          navigate('/dashboard');
         } else {
           // # Handle backend errors (e.g., email already exists, invalid data)
           setSubmissionMessage(`Sign up failed: ${data.message || "An unknown error occurred."}`);
@@ -197,111 +206,115 @@ const SignUpForm = ({ onBack }) => {
   const isFormValid = role && name.trim() && email.trim() && password.trim() && confirmPassword.trim() && !roleError && !nameError && !emailError && !passwordError && !confirmPasswordError;
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div>
-        <AppHeader subtitle="Sign up" />
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-          {/* Role Selection */}
-          <div>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              onBlur={() => setRoleTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] bg-white ${roleError && (roleTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            >
-              <option value="" disabled hidden>
-                Choose a role
-              </option>
-              <option id="admin" value="Admin">
-                Admin/Receptionist
-              </option>
-              <option id="nurse" value="Nurse">
-                Nurse
-              </option>
-              <option id="doctor" value="Doctor">
-                Doctor
-              </option>
-            </select>
-            {roleError && (roleTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{roleError}</p>}
-          </div>
+    <div className="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+        <div className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md">
+            <div className="w-full max-w-sm mx-auto">
+            <div>
+                <AppHeader subtitle="Sign up" />
+                <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                {/* Role Selection */}
+                <div>
+                    <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    onBlur={() => setRoleTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] bg-white ${roleError && (roleTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    >
+                    <option value="" disabled hidden>
+                        Choose a role
+                    </option>
+                    <option id="admin" value="Admin">
+                        Admin/Receptionist
+                    </option>
+                    <option id="nurse" value="Nurse">
+                        Nurse
+                    </option>
+                    <option id="doctor" value="Doctor">
+                        Doctor
+                    </option>
+                    </select>
+                    {roleError && (roleTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{roleError}</p>}
+                </div>
 
-          {/* Name Input */}
-          <div>
-            <input
-              type="text"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => setNameTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${nameError && (nameTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {nameError && (nameTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
-          </div>
+                {/* Name Input */}
+                <div>
+                    <input
+                    type="text"
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={() => setNameTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${nameError && (nameTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {nameError && (nameTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{nameError}</p>}
+                </div>
 
-          {/* Email Input */}
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => setEmailTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${emailError && (emailTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {emailError && (emailTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
-          </div>
+                {/* Email Input */}
+                <div>
+                    <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setEmailTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${emailError && (emailTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {emailError && (emailTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+                </div>
 
-          {/* Password Input */}
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onBlur={() => setPasswordTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${passwordError && (passwordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {passwordError && (passwordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
-          </div>
+                {/* Password Input */}
+                <div>
+                    <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => setPasswordTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${passwordError && (passwordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {passwordError && (passwordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
+                </div>
 
-          {/* Confirm Password Input */}
-          <div>
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onBlur={() => setConfirmPasswordTouched(true)} // # Set touched state on blur
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${confirmPasswordError && (confirmPasswordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
-              style={{ fontFamily: "Kollektif, sans-serif" }}
-            />
-            {confirmPasswordError && (confirmPasswordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{confirmPasswordError}</p>}
-          </div>
+                {/* Confirm Password Input */}
+                <div>
+                    <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onBlur={() => setConfirmPasswordTouched(true)} // # Set touched state on blur
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] ${confirmPasswordError && (confirmPasswordTouched || formSubmitted) ? "border-red-500" : "border-gray-400"}`}
+                    style={{ fontFamily: "Kollektif, sans-serif" }}
+                    />
+                    {confirmPasswordError && (confirmPasswordTouched || formSubmitted) && <p className="text-red-500 text-sm mt-1">{confirmPasswordError}</p>}
+                </div>
 
-          {/* Submission Message */}
-          {submissionMessage && <p className={`text-center text-sm mt-2 ${isSuccess ? "text-green-600" : "text-red-600"}`}>{submissionMessage}</p>}
+                {/* Submission Message */}
+                {submissionMessage && <p className={`text-center text-sm mt-2 ${isSuccess ? "text-green-600" : "text-red-600"}`}>{submissionMessage}</p>}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={!isFormValid || isLoading} // Disable if form is not valid or loading
-            className="w-full text-white py-3 px-4 rounded-full font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#045ae2] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ fontFamily: "Kollektif, sans-serif", backgroundColor: "#045ae2" }}
-          >
-            {isLoading ? "Signing Up..." : "Sign up"} {/* # Show loading text */}
-          </button>
-        </form>
-      </div>
-      <p className="text-center text-sm text-gray-500 mt-8" style={{ fontFamily: "Kollektif, sans-serif" }}>
-        Already have an account?{" "}
-        <button onClick={onBack} className="font-semibold hover:underline" style={{ color: "#045ae2" }}>
-          Login
-        </button>
-      </p>
+                {/* Submit Button */}
+                <button
+                    type="submit"
+                    disabled={!isFormValid || isLoading} // Disable if form is not valid or loading
+                    className="w-full text-white py-3 px-4 rounded-full font-semibold transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#045ae2] disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: "Kollektif, sans-serif", backgroundColor: "#045ae2" }}
+                >
+                    {isLoading ? "Signing Up..." : "Sign up"} {/* # Show loading text */}
+                </button>
+                </form>
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-8" style={{ fontFamily: "Kollektif, sans-serif" }}>
+                Already have an account?{" "}
+                <button onClick={handleReturnToRoleSelection} className="font-semibold hover:underline" style={{ color: "#045ae2" }}>
+                Login
+                </button>
+            </p>
+            </div>
+        </div>
     </div>
   );
 };
