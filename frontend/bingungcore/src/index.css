@@ -4,15 +4,15 @@
 
 @font-face {
     font-family: 'Kollektif';
-    src: url('https://fontlibrary.org/assets/fonts/kollektif/15f2bdf9bbb50647f894a865a6a3b839/ab03333aab3754e0c8108928b8be7341/Kollektif.ttf') format('truetype');
+    src: url('../public/fonts/Kollektif/Kollektif.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Kollektif';
-    src: url('https://fontlibrary.org/assets/fonts/kollektif/15f2bdf9bbb50647f894a865a6a3b839/477a673c242e8d828c4344d75ab2f741/Kollektif-Bold.ttf') format('truetype');
+    src: url('../public/fonts/Kollektif/Kollektif-Bold.ttf') format('truetype');
     font-weight: bold;
-    font-style: normal;
 }
 
 body {
