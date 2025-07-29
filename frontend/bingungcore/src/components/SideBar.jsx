@@ -1,8 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import {ChevronLeft, ChevronRight, Hospital} from 'lucide-react';
+import AppHeader from './AppHeader';
+import SideBarItem from './SideBarItem';
 
 const SideBar = ({isCollapsed, toggleSideBar}) => {
     const role = localStorage.getItem('role');
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        navigate('/login')
+    }
 
     const commonLinks = [
         { path: '/dashboard', label: 'Dashboard' },
@@ -11,9 +19,9 @@ const SideBar = ({isCollapsed, toggleSideBar}) => {
 
     const roleBasedLinks = {
         admin: [
-            { path: '/patientManagement', label: 'Patient Management' },
-            { path: '/appointmentSchedule', label: 'Appointment Schedule' },
-            { path: '/roomManagement', label: 'Room Management' },
+            { path: '/admin/patientManagement', label: 'Patient Management' },
+            { path: '/admin/appointmentSchedule', label: 'Appointment Schedule' },
+            { path: '/admin/roomManagement', label: 'Room Management' },
         ],
 
         doctor: [
@@ -30,21 +38,54 @@ const SideBar = ({isCollapsed, toggleSideBar}) => {
 
     return (
         <>
-            <aside className={`${isCollapsed ? "w-14" : "w-64"} h-full bg-gray-800 transition-all duration-300`}>
-                <button onClick={toggleSideBar} className="absolute -right-2.5 top-0 w-6 h-6 flex justify-center items-center hover:bg-gray-300 rounded-full transition">
-                    Toggle
-                </button>
-                <div className="w-64 bg-blue-100 h-screen p-4">
-                    <h2 className="text-lg font-bold mb-4 capitalize">{role} Menu</h2>
-                    <ul>
-                        {linksToShow.map((link) => (
-                            <li key={link.path} className="mb-2">
-                                <Link to={link.path} className="text-blue-800 hover:underline">{link.label}</Link>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </aside>
+            <div className="flex min-h-screen">
+                <aside className={`${isCollapsed ? "w-16" : "w-64"} bg-blue-800 text-white transition-all duration-300 h-screen flex flex-col fixed left-0 top-0`}>
+                    <button onClick={toggleSideBar} className="absolute top-4 right-[-12px] w-6 h-6 flex items-center justify-center bg-white text-blue-800 rounded-full shadow hover:bg-gray-200 transition">
+                        {isCollapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
+                    </button>
+                    <nav className="mt-16 px-2">
+
+                        {/* MediLink Logo */}
+                        <div className="flex justify-center items-center mb-4">
+                            {isCollapsed ? (<Hospital size={24} className="text-white"/>) : (
+                                <h2 className="text-white text-sm">
+                                    <AppHeader mode='sidebar'/>
+                            </h2>)}
+                        </div>
+
+                        {/* Pages */}
+                        <ul className="space-y-2">
+                            {linksToShow.map((item) => (
+                                <SideBarItem key={item.path} path={item.path} label={item.label} isCollapsed={isCollapsed}/>
+                            ))}
+                        </ul>
+                    </nav>
+
+                    {/* Profile and logout button */}
+                    <div className="mt-auto p-4 border-t border-white/20">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <img className="w-8 h-8 rounded-full border border-white object-cover"/>
+                                {!isCollapsed && (
+                                    <div className="text-white text-sm">
+                                        <p className="font-semibold">Username</p>
+                                        
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Logout button */}
+                            {!isCollapsed && (
+                                <button onClick={handleLogout} className="ml-2 px-2 py-1 text-sm font-semibold text-white hover:text-red-500 transition">
+                                    Logout
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    
+                </aside>
+            </div>
         </>
         
     )

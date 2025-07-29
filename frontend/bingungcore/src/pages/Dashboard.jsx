@@ -1,13 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import SideBar from "../components/SideBar";
 import { Outlet } from "react-router-dom";
 
 const Dashboard = () => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
   return (
     <>
       <div className="flex min-h-screen">
-        <SideBar />
-        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar} />
+        <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}>
           <div className="flex justify-between items-center">
             <div className="border rounded-full px-4 py-2 w-full">
               <div className="flex items-center justify-between">
@@ -20,7 +24,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-4">
             {/* 3 kotak dan today's appointments */}
             <div>
               <div className="grid grid-cols-3 gap-4 mb-4">
@@ -38,64 +42,64 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="col-span-1 bg-white shadow rounded-md p-4 gap-4">
-                <h3 className="font-semibold text-lg mb-4">Today's Appointment</h3>
-                <ul className="divide-y">
-                  <li className="py-2 flex justify-between">
+              <div class="col-span-1 bg-white shadow rounded-md p-4 gap-4">
+                <h3 class="font-semibold text-lg mb-4">Today's Appointment</h3>
+                <ul class="divide-y">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Sam Strand</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-yellow-500">Waiting</span>
+                    <span class="text-yellow-500">Waiting</span>
                   </li>
-                  <li className="py-2 flex justify-between">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Heartman</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-yellow-500">Waiting</span>
+                    <span class="text-yellow-500">Waiting</span>
                   </li>
-                  <li className="py-2 flex justify-between">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Mama</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-green-500">Scheduled</span>
+                    <span class="text-green-500">Scheduled</span>
                   </li>
-                  <li className="py-2 flex justify-between">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Lockne</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-green-500">Scheduled</span>
+                    <span class="text-green-500">Scheduled</span>
                   </li>
-                  <li className="py-2 flex justify-between">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Cliff Unger</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-green-500">Scheduled</span>
+                    <span class="text-green-500">Scheduled</span>
                   </li>
-                  <li className="py-2 flex justify-between">
+                  <li class="py-2 flex justify-between">
                     <div>
                       <p>Lou</p>
-                      <p className="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
                     </div>
-                    <span className="text-blue-500">Finished</span>
+                    <span class="text-blue-500">Finished</span>
                   </li>
                 </ul>
               </div>
             </div>
             {/* Graphs */}
-            <div className="">
-              <div className="col-span-1 grid grid-cols-1 gap-4">
-                <div className="bg-blue-600 text-white rounded-md p-4">
-                  <h4 className="font-semibold mb-2">Patient per Day</h4>
-                  <div className="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+            <div class="">
+              <div class="col-span-1 grid grid-cols-1 gap-4">
+                <div class="bg-blue-600 text-white rounded-md p-4">
+                  <h4 class="font-semibold mb-2">Patient per Day</h4>
+                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
                 </div>
-                <div className="bg-white rounded-md shadow p-4">
-                  <h4 className="font-semibold mb-2">Patient per Month</h4>
-                  <div className="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                <div class="bg-white rounded-md shadow p-4">
+                  <h4 class="font-semibold mb-2">Patient per Month</h4>
+                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
                 </div>
               </div>
             </div>
