@@ -107,6 +107,7 @@ const Dashboard = () => {
                         </div>
                     </div>
                     <span class="text-blue-500">Finished</span>
+                    </div>
                   </li>
                 </ul>
               </div>
