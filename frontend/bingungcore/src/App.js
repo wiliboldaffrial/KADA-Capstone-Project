@@ -1,14 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-import RoleSelection from './pages/RoleSelection';
-import LoginForm from './pages/LoginForm';
-import SignUpForm from './pages/SignUpForm';
+import RoleSelection from './pages/RoleSelection/RoleSelection';
+import LoginForm from './pages/Login/LoginForm';
+import SignUpForm from './pages/SignUp/SignUpForm';
 import Dashboard from './pages/Dashboard';
 import AppointmentSchedule from './pages/Admin/AppointmentSchedule';
 import PatientManagement from './pages/Admin/PatientManagement';
 import RoomManagement from './pages/Admin/RoomManagement';
-import PatientList from './pages/PatientList.jsx'
+import PatientCheckup from './pages/Doctor/PatientCheckup';
 
 
 // Main App Component
@@ -24,7 +24,8 @@ export default function App() {
                 <Route path="/admin/appointmentSchedule" element={<AppointmentSchedule/>}></Route>
                 <Route path="/admin/patientManagement" element={<PatientManagement/>}></Route>
                 <Route path="/admin/roomManagement" element={<RoomManagement/>}></Route>
-                <Route path="/patientlist" element={<PatientList />} />
+                <Route path="/doctor/patientCheckup/:id" element={<PatientCheckup />} />
+
             </Routes>
         </Router>
     );
