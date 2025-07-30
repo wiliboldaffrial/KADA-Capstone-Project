@@ -21,7 +21,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
   const roleBasedLinks = {
     "admin/receptionist": [
       { path: "/admin/patientManagement", label: "Patient Management", iconType: "patientlist" },
-      { path: "/admin/appointmentSchedule", label: "Appointment Schedule", iconType: "schedule" },
+      { path: "/admin/appointmentSchedule", label: "Appointment Schedule", iconType: "appoinment" },
       { path: "/admin/roomManagement", label: "Room Management", iconType: "room" },
     ],
 
