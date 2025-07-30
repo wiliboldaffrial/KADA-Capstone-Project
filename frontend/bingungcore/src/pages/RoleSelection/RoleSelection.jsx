@@ -1,6 +1,6 @@
 import React from 'react';
 import {useNavigate} from 'react-router-dom';
-import AppHeader from '../components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 // Component for the first step: Role Selection
 const RoleSelection = () => {
@@ -9,7 +9,7 @@ const RoleSelection = () => {
     const roles = ['Admin/Receptionist', 'Nurse', 'Doctor'];
 
     const handleSelectRole = (role) => {
-        localStorage.setItem('role', role);
+        localStorage.setItem('role', role.toLowerCase());
         console.log(localStorage.getItem('role'));
         navigate('/login');
     }

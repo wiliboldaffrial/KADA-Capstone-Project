@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "../../components/AppHeader";
 
 // Component for the second step: Email and Password Login
 const LoginForm = () => {
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
 
   const handleReturnToRoleSelection = () => {
     navigate("/");
@@ -14,7 +17,17 @@ const LoginForm = () => {
   // Bypass all validation and API, just redirect to dashboard
   const handleSubmit = (e) => {
     e.preventDefault();
-    navigate("/dashboard");
+
+    try{
+      // Simulate successful login
+      //otherwise make an API call to verify credentials
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", email);
+
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Invalid credentials")
+    }
   };
 
   return (
