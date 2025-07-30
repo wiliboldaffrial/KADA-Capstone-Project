@@ -1,44 +1,30 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
 import RoleSelection from './pages/RoleSelection/RoleSelection';
-import LoginForm from './pages/Login/LoginForm';
-import SignUpForm from './pages/SignUp/SignUpForm';
+import LoginForm from './pages/LoginForm/RoleSelection';
+import SignUpForm from './pages/SignUpForm/RoleSelection';
+import Dashboard from './pages/Dashboard';
+import AppointmentSchedule from './pages/Admin/AppointmentSchedule';
+import PatientManagement from './pages/Admin/PatientManagement';
+import RoomManagement from './pages/Admin/RoomManagement';
+
 
 // Main App Component
 export default function App() {
-    const [view, setView] = useState('roleSelection'); // 'roleSelection', 'loginForm', or 'signUpForm'
-    const [selectedRole, setSelectedRole] = useState(null);
-
-    const handleSelectRole = (role) => {
-        setSelectedRole(role);
-        setView('loginForm');
-    };
-    
-    const handleBackToRoleSelection = () => {
-        setView('roleSelection');
-        setSelectedRole(null);
-    }
-
-    const handleGoToSignUp = () => {
-        setView('signUpForm');
-    }
-
-    const renderView = () => {
-        switch(view) {
-            case 'loginForm':
-                return <LoginForm role={selectedRole} onBack={handleBackToRoleSelection} />;
-            case 'signUpForm':
-                return <SignUpForm onBack={handleBackToRoleSelection} />;
-            case 'roleSelection':
-            default:
-                return <RoleSelection onSelectRole={handleSelectRole} onGoToSignUp={handleGoToSignUp} />;
-        }
-    }
 
     return (
-        <div className="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-            <div className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md">
-                {renderView()}
-            </div>
-        </div>
+        <Router>
+            <Routes>
+                <Route path="/" element={<RoleSelection />} />
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/signup" element={<SignUpForm />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/admin/appointmentSchedule" element={<AppointmentSchedule/>}></Route>
+                <Route path="/admin/patientManagement" element={<PatientManagement/>}></Route>
+                <Route path="/admin/roomManagement" element={<RoomManagement/>}></Route>
+
+            </Routes>
+        </Router>
     );
 }
