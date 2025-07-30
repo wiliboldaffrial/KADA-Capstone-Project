@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import SideBar from "../components/SideBar";
-import { Outlet } from "react-router-dom";
+import { Outlet } from 'react-router-dom';
+import PatientChartDay from "../components/PatientChartDay";
+import PatientBarChart from "../components/PatientBarMonth";
 
 const Dashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -84,6 +86,25 @@ const Dashboard = () => {
                     <div>
                       <p>Lou</p>
                       <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
+                      
+                    {/* Graphs */}
+                    <div className="flex flex-col gap-4">
+                        
+                        {/* Card 1 */}
+                        <div className="bg-blue-600 text-white rounded-md p-4 flex flex-col flex-1">
+                            <h4 className="font-semibold mb-2">Patient per Day</h4>
+                            <div className="flex-1">
+                                <PatientChartDay />
+                            </div>
+                        </div>
+
+                        {/* Card 2 */}
+                        <div className="bg-white rounded-md shadow p-4 flex flex-col flex-1">
+                            <h4 className="font-semibold mb-2">Patient per Month</h4>
+                            <div className="flex-1">
+                                <PatientBarChart />
+                            </div>
+                        </div>
                     </div>
                     <span class="text-blue-500">Finished</span>
                   </li>
