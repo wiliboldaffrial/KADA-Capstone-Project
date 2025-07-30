@@ -40,35 +40,43 @@ const SharedPatientListLayout = ({ title, patients: patientData }) => {
     const toggleSideBar = () => setIsCollapsed(!isCollapsed);
 
     return (
-        <div className="flex h-screen bg-gray-100">
-            <SideBar isCollapsed={isCollapsed} toggleSideBar={toggleSideBar} />
-            <main className="flex-1 p-8 overflow-y-auto">
-                <h2 className="text-3xl font-bold text-gray-800 mb-6">{title}</h2>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="flex justify-end items-center mb-6">
-                        <div className="flex items-center space-x-4">
-                            
-                            {/* --- FIX FOR SEARCH ICON --- */}
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <IconMagnifyingGlass />
+            <div className="flex h-screen bg-gray-100">
+                <SideBar isCollapsed={isCollapsed} toggleSideBar={toggleSideBar} />
+                <div className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
+                    <main className="p-8 overflow-y-auto h-full">
+                        <h2 className="text-3xl font-bold text-gray-800 mb-6">{title}</h2>
+                            <div className="bg-white p-6 rounded-lg shadow-md">
+                                <div className="flex justify-end items-center mb-6">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <IconMagnifyingGlass />
+                                            </div>
+                                            <input
+                                            type="text"
+                                            placeholder="Search"
+                                            className="pl-10 pr-4 py-2 border rounded-lg"
+                                            />
+                                        </div>
+                                        <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Filter</button>
+                                        <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Sort</button>
+                                    </div>
                                 </div>
-                                <input type="text" placeholder="Search" className="pl-10 pr-4 py-2 border rounded-lg" />
+                                <div className="space-y-3">
+                                {patientData.map((patient) => (
+                                    <PatientItem
+                                    key={patient.id}
+                                    patient={patient}
+                                    onToggle={handleToggleExpand}
+                                    isExpanded={expandedPatientId === patient.id}
+                                    />
+                                ))}
                             </div>
-                            {/* --- END OF FIX --- */}
-
-                            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Filter</button>
-                            <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Sort</button>
                         </div>
-                    </div>
-                    <div className="space-y-3">
-                        {patientData.map(patient => (
-                            <PatientItem key={patient.id} patient={patient} onToggle={handleToggleExpand} isExpanded={expandedPatientId === patient.id} />
-                        ))}
-                    </div>
+                    </main>
                 </div>
-            </main>
-        </div>
+            </div>
+
     );
 };
 
