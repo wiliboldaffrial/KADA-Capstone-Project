@@ -5,36 +5,44 @@ import AppHeader from './AppHeader';
 import SideBarItem from './SideBarItem';
 
 const SideBar = ({isCollapsed, toggleSideBar}) => {
-    const role = localStorage.getItem('role');
+    const role = localStorage.getItem('role')?.toLowerCase();
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        navigate('/login')
+        localStorage.removeItem('role');
+        navigate('/')
     }
 
     const commonLinks = [
         { path: '/dashboard', label: 'Dashboard' },
-        { path: '/addAnnouncement', label: 'Add Announcement' }
+        { path: '/addAnnouncement', label: 'Announcement' }
     ]
 
     const roleBasedLinks = {
-        admin: [
+        'admin/receptionist': [
             { path: '/admin/patientManagement', label: 'Patient Management' },
             { path: '/admin/appointmentSchedule', label: 'Appointment Schedule' },
             { path: '/admin/roomManagement', label: 'Room Management' },
         ],
 
-        doctor: [
-            { path: '/patientList', label: 'Patient List'}
+        'doctor': [
+            { path: '/doctor/patientCheckup/:id', label: 'Patient List'}
         ],
 
-        nurse: [
+        'nurse': [
             { path: '/patientList', label: 'Patient List' }
 
         ]
     }
 
     const linksToShow = [...commonLinks, ...(roleBasedLinks[role] || [])];
+    const roleLinks = roleBasedLinks[role] || [];
+
+    React.useEffect(() => {
+        if (!role) {
+            navigate('/');
+        }
+    }, [role, navigate]);
 
     return (
         <>
@@ -65,10 +73,11 @@ const SideBar = ({isCollapsed, toggleSideBar}) => {
                     <div className="mt-auto p-4 border-t border-white/20">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <img className="w-8 h-8 rounded-full border border-white object-cover"/>
+                                <img className="w-8 h-8 rounded-full border border-white object-cover" alt="Profile"/>
                                 {!isCollapsed && (
                                     <div className="text-white text-sm">
                                         <p className="font-semibold">Username</p>
+                                        <p className="text-xs text-gray-300">{role}</p>
                                         
                                     </div>
                                 )}

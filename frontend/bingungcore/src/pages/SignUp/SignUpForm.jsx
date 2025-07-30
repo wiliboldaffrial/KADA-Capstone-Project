@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-import AppHeader from "../components/AppHeader";
+import AppHeader from "../../components/AppHeader";
 
 // Component for the Sign Up page
 const SignUpForm = () => {
@@ -146,9 +146,6 @@ const SignUpForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormSubmitted(true); // # Set formSubmitted to true on submission attempt
-    setSubmissionMessage(""); // Clear any previous submission messages
-    setIsSuccess(false); // Reset success status
-
     // Run all front-end validations one last time before submission
     if (validateForm()) {
       setIsLoading(true); // # Set loading state to true
@@ -173,18 +170,10 @@ const SignUpForm = () => {
         const data = await response.json(); // # Assuming your backend returns JSON
 
         if (response.ok) {
-          // # Check if the response status is 2xx (success)
-          setSubmissionMessage("Sign up successful! Redirecting...");
+          localStorage.setItem('role', role.toLowerCase());
+          setSubmissionMessage("Registration successful! Redirecting to ");
           setIsSuccess(true);
-          console.log("Registration successful:", data);
-          // # In a real app, you'd redirect the user or show a success page
-          // # Example: setTimeout(() => onBack(), 2000); // Go back to login after 2 seconds
-          navigate('/dashboard');
-        } else {
-          // # Handle backend errors (e.g., email already exists, invalid data)
-          setSubmissionMessage(`Sign up failed: ${data.message || "An unknown error occurred."}`);
-          setIsSuccess(false);
-          console.error("Registration failed:", data);
+          navigate('/login'); // # Redirect to login page on success
         }
       } catch (error) {
         // # Handle network errors or other unexpected issues
