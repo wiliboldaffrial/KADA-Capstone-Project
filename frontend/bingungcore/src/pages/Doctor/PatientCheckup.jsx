@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, Link, Home } from 'lucide-react';
 import SideBar from '../../components/SideBar';
 
+//Mock Patient Data
+// This data is used to simulate the patient information and checkups.
 const mockPatient = {
   id: "KAMC123456789",
   name: "Sam Strand",
@@ -12,7 +14,15 @@ const mockPatient = {
     {
       id: 1,
       date: "12 February 2025",
-      details: "Initial Checkup by Nurse\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      details: 
+      `
+      Weight: 75kg
+      Height: 180cm
+      Blood Pressure: 120/80 mmHg
+      Heart Rate: 72 bpm
+      Temperature: 36.5°C
+      Notes: Patient reports no significant issues. Regular checkup scheduled for next month.
+      `
     },
     {
       id: 2,
@@ -31,8 +41,13 @@ const PatientCheckup = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedCheckup, setSelectedCheckup] = useState(mockPatient.checkups[0]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [doctorNotes, setDoctorNotes] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
   
   const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  const handleSaveNotes = () => {
+    console.log("Doctor's Notes Saved:", doctorNotes);
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -42,7 +57,16 @@ const PatientCheckup = () => {
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">Doctor - Patient Checkup</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gray-800">Doctor - Patient Checkup</h1>
+              <Link 
+                to="/doctor/patients" 
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <Home size={20} />
+                All Patients
+              </Link>
+            </div>
             <div className="flex space-x-4">
               <div className="relative">
                 <input
@@ -108,20 +132,36 @@ const PatientCheckup = () => {
             <div className="col-span-8">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold mb-4">Detail</h3>
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-wrap">{selectedCheckup.details}</p>
-                </div>
+                {selectedCheckup.id === 1 ? (
+                  // Read-only nurse checkup details
+                  <div className="prose max-w-none">
+                    <p className="whitespace-pre-wrap">{selectedCheckup.details}</p>
+                  </div>
+                ) : (
+                  // Editable doctor's notes
+                  <textarea
+                    className="w-full h-48 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={doctorNotes}
+                    onChange={(e) => setDoctorNotes(e.target.value)}
+                    placeholder="Enter your medical notes here..."
+                  />
+                )}
+
                 {/* AI Response Section */}
                 <div className="mt-6 pt-6 border-t">
-                  <p className="text-sm text-gray-500 mb-2">AI Response (Optional)</p>
-                  <textarea
-                    className="w-full h-32 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="AI generated response will appear here..."
-                  />
+                  <p className="text-sm text-gray-500 mb-2">AI Response</p>
+                  <div className="bg-gray-50 p-4 rounded-lg min-h-[100px]">
+                    {aiResponse || 'AI insights will appear here after consultation'}
+                  </div>
                   <div className="flex justify-between mt-4">
-                    <button className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                      Save
-                    </button>
+                    {selectedCheckup.id !== 1 && (
+                      <button 
+                        onClick={handleSaveNotes}
+                        className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        Save Notes
+                      </button>
+                    )}
                     <button className="px-6 py-2 border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2">
                       <span className="w-4 h-4 bg-blue-500 rounded-full"></span>
                       Consult with AI
