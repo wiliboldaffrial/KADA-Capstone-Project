@@ -4,6 +4,22 @@ import { Outlet } from 'react-router-dom';
 import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
 
+const appointmentsToday = [
+  { id: 1, name: "Sam Strand", doctor: "Dr. Deadman", status: "Waiting" },
+  { id: 2, name: "Heartman", doctor: "Dr. Deadman", status: "Waiting" },
+  { id: 3, name: "Mama", doctor: "Dr. Deadman", status: "Scheduled" },
+  { id: 4, name: "Lockne", doctor: "Dr. Deadman", status: "Scheduled" },
+  { id: 5, name: "Cliff Unger", doctor: "Dr. Deadman", status: "Scheduled" },
+  { id: 6, name: "Lou", doctor: "Dr. Deadman", status: "Finished" },
+];
+
+const statusColor = {
+  Waiting: "text-yellow-500",
+  Scheduled: "text-green-500",
+  Finished: "text-blue-500",
+};
+
+
 const Dashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -44,71 +60,19 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div class="col-span-1 bg-white shadow rounded-md p-4 gap-4">
-                <h3 class="font-semibold text-lg mb-4">Today's Appointment</h3>
-                <ul class="divide-y">
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Sam Strand</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                    </div>
-                    <span class="text-yellow-500">Waiting</span>
-                  </li>
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Heartman</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                    </div>
-                    <span class="text-yellow-500">Waiting</span>
-                  </li>
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Mama</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                    </div>
-                    <span class="text-green-500">Scheduled</span>
-                  </li>
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Lockne</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                    </div>
-                    <span class="text-green-500">Scheduled</span>
-                  </li>
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Cliff Unger</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                    </div>
-                    <span class="text-green-500">Scheduled</span>
-                  </li>
-                  <li class="py-2 flex justify-between">
-                    <div>
-                      <p>Lou</p>
-                      <p class="text-xs text-gray-500">Time with Dr. Deadman</p>
-                      
-                    {/* Graphs */}
-                    <div className="flex flex-col gap-4">
-                        
-                        {/* Card 1 */}
-                        <div className="bg-blue-600 text-white rounded-md p-4 flex flex-col flex-1">
-                            <h4 className="font-semibold mb-2">Patient per Day</h4>
-                            <div className="flex-1">
-                                <PatientChartDay />
-                            </div>
-                        </div>
-
-                        {/* Card 2 */}
-                        <div className="bg-white rounded-md shadow p-4 flex flex-col flex-1">
-                            <h4 className="font-semibold mb-2">Patient per Month</h4>
-                            <div className="flex-1">
-                                <PatientBarChart />
-                            </div>
-                        </div>
-                    </div>
-                    <span class="text-blue-500">Finished</span>
-                    </div>
-                  </li>
+              <div className="col-span-1 bg-white shadow rounded-md p-4 gap-4">
+                <h3 className="font-semibold text-lg mb-4">Today's Appointment</h3>
+                
+                <ul className="divide-y">
+                  {appointmentsToday.map((appt) => (
+                    <li key={appt.id} className="py-2 flex justify-between">
+                      <div>
+                        <p>{appt.name}</p>
+                        <p className="text-xs text-gray-500">Time with {appt.doctor}</p>
+                      </div>
+                      <span className={statusColor[appt.status]}>{appt.status}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -117,11 +81,11 @@ const Dashboard = () => {
               <div class="col-span-1 grid grid-cols-1 gap-4">
                 <div class="bg-blue-600 text-white rounded-md p-4">
                   <h4 class="font-semibold mb-2">Patient per Day</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                  <div class="h-40 flex items-center justify-center text-sm">{<PatientChartDay/>}</div>
                 </div>
                 <div class="bg-white rounded-md shadow p-4">
                   <h4 class="font-semibold mb-2">Patient per Month</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                  <div class="h-40 flex items-center justify-center text-sm">{<PatientBarChart/>}</div>
                 </div>
               </div>
             </div>
