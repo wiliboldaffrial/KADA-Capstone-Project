@@ -1,28 +1,27 @@
-import React from 'react';
+import React from "react";
+import MediLinkLogo from "../assets/images/MediLink.png"; // Adjust the path if needed
 
 // Helper component for the header
 const AppHeader = ({ subtitle, mode }) => {
-    const isSidebar = mode === 'sidebar';
-    const textColor = isSidebar ? 'white' : '#045ae2';
+  const isSidebar = mode === "sidebar";
+  const logoWidth = isSidebar ? 130 : 220; // Increased sizes
+  const textColor = isSidebar ? "white" : "#045ae2";
 
-    return (
-        <>
-        <div className="text-center">
-            <h1 className="text-4xl" style={{ fontFamily: 'Kollektif, sans-serif', color: textColor }}>
-                MediLink
-            </h1>
-            <p className="mt-0" style={{ fontFamily: 'Kollektif, sans-serif', color: textColor }}>
-                Hospital Management App
-            </p>
-            {subtitle && (
-                <p className="text-xl text-gray-700 mt-8" style={{ fontFamily: 'Kollektif, sans-serif' }}>
-                    {subtitle}
-                </p>
-            )}
-        </div>
-        </>
-    )
-    
+  return (
+    <div className={`flex items-center ${isSidebar ? "justify-center px-4 py-4" : "justify-start"} gap-2`}>
+      <img src={MediLinkLogo} alt="MediLink Logo" style={{ width: logoWidth, height: "auto" }} />
+      {!isSidebar && (
+        <h1 className="text-xl font-bold" style={{ fontFamily: "Kollektif, sans-serif", color: textColor }}>
+          MediLink
+        </h1>
+      )}
+      {subtitle && !isSidebar && (
+        <p className="ml-4 text-lg" style={{ fontFamily: "Kollektif, sans-serif", color: textColor }}>
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
 };
 
 export default AppHeader;

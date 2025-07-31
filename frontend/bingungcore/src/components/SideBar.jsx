@@ -46,16 +46,12 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
           <button onClick={toggleSideBar} className="absolute top-4 right-[-12px] w-6 h-6 flex items-center justify-center bg-white text-blue-800 rounded-full shadow hover:bg-gray-200 transition">
             {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
-          <nav className="mt-16 px-2">
+          <nav className="mt-6 px-2">
             {/* MediLink Logo */}
-            <div className="flex justify-center items-center mb-4">
-              {isCollapsed ? (
-                <Hospital size={24} className="text-white" />
-              ) : (
-                <h2 className="text-white text-sm">
-                  <AppHeader mode="sidebar" />
-                </h2>
-              )}
+            <div className="flex justify-center items-center mb-2">
+              <h2 className="text-white text-sm">
+                <AppHeader mode="sidebar" />
+              </h2>
             </div>
 
             {/* Pages */}
@@ -70,7 +66,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
           <div className="mt-auto p-4 border-t border-white/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img className="w-8 h-8 rounded-full border border-white object-cover" alt="Profile" />
+                <img className="w-8 h-8 rounded-full border border-white object-cover" />
                 {!isCollapsed && (
                   <div className="text-white text-sm">
                     <p className="font-semibold">Username</p>
