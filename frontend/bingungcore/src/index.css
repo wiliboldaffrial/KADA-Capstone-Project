@@ -2,19 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-    font-family: 'Kollektif';
-    src: url('../public/fonts/Kollektif/Kollektif.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Kollektif';
-    src: url('../public/fonts/Kollektif/Kollektif-Bold.ttf') format('truetype');
-    font-weight: bold;
-}
-
 body {
-    font-family: 'Kollektif', sans-serif;
+  font-family: "Kollektif", sans-serif;
 }
