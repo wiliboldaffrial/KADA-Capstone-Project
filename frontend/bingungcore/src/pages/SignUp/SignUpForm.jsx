@@ -213,13 +213,13 @@ const SignUpForm = () => {
                     <option value="" disabled hidden>
                         Choose a role
                     </option>
-                    <option id="admin" value="Admin">
+                    <option id="admin" value="admin/receptionist">
                         Admin/Receptionist
                     </option>
-                    <option id="nurse" value="Nurse">
+                    <option id="nurse" value="nurse">
                         Nurse
                     </option>
-                    <option id="doctor" value="Doctor">
+                    <option id="doctor" value="doctor">
                         Doctor
                     </option>
                     </select>
