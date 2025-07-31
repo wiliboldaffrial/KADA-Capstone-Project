@@ -1,23 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import Modal from '../../components/Modal'; // Make sure this path is correct
 import SideBar from '../../components/SideBar';
 import axios from 'axios';
 
-const initialPatients = [
-  { id: 1, nik: '320101012345678', name: 'Alice', gender: 'Female', age: 20, birthdate: '2005-05-10', bloodType: 'O', contact: '081234567890', address: '123 Wonderland Ave', medicalHistory: 'None' },
-  { id: 2, nik: '320101023456789', name: 'Elsa', gender: 'Female', age: 22, birthdate: '2003-03-15', bloodType: 'A', contact: '081234567891', address: '456 Arendelle St', medicalHistory: 'Allergy to dust' },
-  { id: 3, nik: '320101034567890', name: 'John', gender: 'Male', age: 30, birthdate: '1995-01-20', bloodType: 'B', contact: '081234567892', address: '789 Sherwood Forest', medicalHistory: 'Asthma' },
-  { id: 4, nik: '320101045678901', name: 'Doe', gender: 'Male', age: 25, birthdate: '2000-11-25', bloodType: 'AB', contact: '081234567893', address: '101 Nowhere Ln', medicalHistory: 'None' },
-];
+const API_URL = 'http://localhost:5000/api/patients';
 
 const PatientManagement = () => {
-
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    
-  const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
-
-  const [patients, setPatients] = useState();
+  const [patients, setPatients] = useState([]); // Initial state is an empty array
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
 
@@ -26,68 +17,117 @@ const PatientManagement = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [editingPatientData, setEditingPatientData] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewPatient(prevState => ({ ...prevState, [name]: value }));
+  const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
+  // --- API Communication ---
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token'); // Assumes token is stored in localStorage after login
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
   };
 
-  const handleAddPatient = (e) => {
+  const fetchPatients = async () => {
+    try {
+      const response = await axios.get(API_URL, getAuthHeaders());
+      // Calculate age for each patient before setting the state
+      const patientsWithAge = response.data.map(p => ({
+        ...p,
+        age: p.birthdate ? new Date().getFullYear() - new Date(p.birthdate).getFullYear() : 'N/A',
+      }));
+      setPatients(patientsWithAge);
+    } catch (error) {
+      console.error('Failed to fetch patients:', error);
+      alert('Failed to fetch patients. Please make sure you are logged in.');
+    }
+  };
+
+  // Fetch patients on component mount
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const handleAddPatient = async (e) => {
     e.preventDefault();
     if (!newPatient.name || !newPatient.nik) {
       alert('Please fill in at least the NIK and Name fields.');
       return;
     }
-    const patientToAdd = {
-      id: Date.now(),
-      ...newPatient,
-      age: newPatient.birthdate ? new Date().getFullYear() - new Date(newPatient.birthdate).getFullYear() : 'N/A',
-    };
-    setPatients([patientToAdd, ...patients]);
-    // MODIFIED: Added success alert
-    alert('Patient successfully added!');
-    setNewPatient({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
-    setShowAddForm(false);
+    try {
+      await axios.post(API_URL, newPatient, getAuthHeaders());
+      alert('Patient successfully added!');
+      setShowAddForm(false);
+      setNewPatient({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
+      fetchPatients(); // Re-fetch to update the list
+    } catch (error) {
+      console.error('Error adding patient:', error);
+      alert(`Error: ${error.response?.data?.message || 'Could not add patient.'}`);
+    }
   };
 
-  const handleSeeDetail = (patient) => {
-    setSelectedPatient(patient);
-    setIsDetailModalOpen(true);
+const handleUpdatePatient = async (e) => {
+  e.preventDefault();
+  try {
+    // This sends the complete, updated patient data object to the API.
+    await axios.put(
+      `${API_URL}/${editingPatientData._id}`, 
+      editingPatientData, // The entire state object is sent as the body.
+      getAuthHeaders()
+    );
+
+    alert('Patient details successfully updated!');
+    setIsEditModalOpen(false);
+    fetchPatients(); // Re-fetch to update the list with new data.
+  } catch (error) {
+    console.error('Error updating patient:', error);
+    alert(`Error: ${error.response?.data?.message || 'Could not update patient.'}`);
+  }
+};
+
+  const handleDeletePatient = async (patientId) => {
+    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+      try {
+        await axios.delete(`${API_URL}/${patientId}`, getAuthHeaders());
+        alert('Patient successfully deleted!');
+        setIsEditModalOpen(false); // Also close the edit modal if deletion happens from there
+        fetchPatients(); // Re-fetch to update the list
+      } catch (error) {
+        console.error('Error deleting patient:', error);
+        alert(`Error: ${error.response?.data?.message || 'Could not delete patient.'}`);
+      }
+    }
   };
 
-  const handleEdit = (patient) => {
-    setSelectedPatient(patient);
-    setEditingPatientData(patient);
-    setIsEditModalOpen(true);
+  // --- Helper Functions for UI ---
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewPatient(prevState => ({ ...prevState, [name]: value }));
   };
 
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
     setEditingPatientData(prevState => ({ ...prevState, [name]: value }));
   };
-
-  const handleUpdatePatient = (e) => {
-    e.preventDefault();
-    const updatedPatientData = {
-        ...editingPatientData,
-        age: editingPatientData.birthdate ? new Date().getFullYear() - new Date(editingPatientData.birthdate).getFullYear() : 'N/A',
-    }
-    setPatients(patients.map(p => p.id === updatedPatientData.id ? updatedPatientData : p));
-    // MODIFIED: Added success alert
-    alert('Patient details successfully updated!');
-    setIsEditModalOpen(false);
-    setSelectedPatient(null);
+  
+  const handleSeeDetail = (patient) => {
+    setSelectedPatient(patient);
+    setIsDetailModalOpen(true);
   };
 
-  const handleDeletePatient = (patientId) => {
-    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
-      setPatients(patients.filter(p => p.id !== patientId));
-      // MODIFIED: Added success alert
-      alert('Patient successfully deleted!');
-      setIsEditModalOpen(false);
-      setSelectedPatient(null);
+  const handleEdit = (patient) => {
+    // Format birthdate for the date input if it exists
+    const patientData = {
+        ...patient,
+        birthdate: patient.birthdate ? new Date(patient.birthdate).toISOString().split('T')[0] : ''
     }
+    setEditingPatientData(patientData);
+    setIsEditModalOpen(true);
   };
-
+  
   const formFields = [
     { name: 'nik', label: 'NIK', type: 'text' },
     { name: 'name', label: 'Name', type: 'text' },
@@ -102,8 +142,8 @@ const PatientManagement = () => {
   return (
     <>
       <div className="flex min-h-screen">
-        <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar}/>
-        <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? 'ml-16': 'ml-64'}`}>
+        <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar} />
+        <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-800">Admin - Patient Management</h1>
             <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
@@ -127,7 +167,7 @@ const PatientManagement = () => {
                       ) : field.type === 'textarea' ? (
                         <textarea id={field.name} name={field.name} value={newPatient[field.name]} onChange={handleInputChange} rows="3" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                       ) : (
-                        <input type={field.type} id={field.name} name={field.name} value={newPatient[field.name]} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md"/>
+                        <input type={field.type} id={field.name} name={field.name} value={newPatient[field.name]} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                       )}
                     </div>
                   ))}
@@ -143,7 +183,8 @@ const PatientManagement = () => {
 
           <div className="space-y-4">
             {patients.map((patient) => (
-              <div key={patient.id} className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between">
+              // Use patient._id from MongoDB as the key
+              <div key={patient._id} className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-gray-800">{patient.nik}</p>
                   <p className="text-gray-700">{patient.name}</p>
@@ -165,14 +206,14 @@ const PatientManagement = () => {
             {selectedPatient && (
               <div className="space-y-3">
                 {Object.entries(selectedPatient).map(([key, value]) => {
-                    if (key === 'id' || key === 'age') return null;
-                    const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                    return (
-                        <div key={key} className="grid grid-cols-3 gap-4">
-                            <p className="font-semibold text-gray-600 col-span-1">{formattedKey}</p>
-                            <p className="text-gray-800 col-span-2">{value}</p>
-                        </div>
-                    )
+                  if (key === '_id' || key === 'age' || key === '__v' || key === 'createdAt' || key === 'updatedAt') return null;
+                  const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                  return (
+                    <div key={key} className="grid grid-cols-3 gap-4">
+                      <p className="font-semibold text-gray-600 col-span-1">{formattedKey}</p>
+                      <p className="text-gray-800 col-span-2">{key === 'birthdate' ? new Date(value).toLocaleDateString() : value}</p>
+                    </div>
+                  )
                 })}
               </div>
             )}
@@ -192,22 +233,22 @@ const PatientManagement = () => {
                       ) : field.type === 'textarea' ? (
                         <textarea id={`edit-${field.name}`} name={field.name} value={editingPatientData[field.name]} onChange={handleEditInputChange} rows="3" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                       ) : (
-                        <input type={field.type} id={`edit-${field.name}`} name={field.name} value={editingPatientData[field.name]} onChange={handleEditInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md"/>
+                        <input type={field.type} id={`edit-${field.name}`} name={field.name} value={editingPatientData[field.name]} onChange={handleEditInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                       )}
                     </div>
                   ))}
                 </div>
                 <div className="flex justify-between items-center mt-6">
-                    <button
-                        type="button"
-                        onClick={() => handleDeletePatient(editingPatientData.id)}
-                        className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700 transition"
-                    >
-                        Delete Patient
-                    </button>
-                    <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                        Save Changes
-                    </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePatient(editingPatientData._id)}
+                    className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700 transition"
+                  >
+                    Delete Patient
+                  </button>
+                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Save Changes
+                  </button>
                 </div>
               </form>
             )}
