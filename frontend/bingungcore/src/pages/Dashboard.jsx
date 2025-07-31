@@ -113,21 +113,19 @@ const Dashboard = () => {
               </div>
             </div>
             {/* Graphs */}
-            <div class="">
-              <div class="col-span-1 grid grid-cols-1 gap-4">
-                <div class="bg-blue-600 text-white rounded-md p-4">
-                  <h4 class="font-semibold mb-2">Patient per Day</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="bg-blue-600 text-white rounded-md p-4 flex flex-col">
+                  <h4 className="font-semibold mb-2">Patient per Day</h4>
+                  <PatientChartDay />
                 </div>
-                <div class="bg-white rounded-md shadow p-4">
-                  <h4 class="font-semibold mb-2">Patient per Month</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                <div className="bg-white rounded-md shadow p-4 flex flex-col">
+                  <h4 className="font-semibold mb-2">Patient per Month</h4>
+                  <PatientBarChart />
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
     </>
   );
 };
