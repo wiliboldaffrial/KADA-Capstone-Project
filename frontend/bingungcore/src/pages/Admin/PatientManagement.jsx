@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus } from 'lucide-react';
-import Modal from '../../components/Modal'; // Make sure this path is correct
+import { UserPlus, Trash2 } from 'lucide-react';
+import Modal from '../../components/Modal';
 import SideBar from '../../components/SideBar';
+import ConfirmationModal from '../../components/ConfirmationModal'; // NEW: Import ConfirmationModal
 import axios from 'axios';
+import { toast } from 'react-hot-toast'; // NEW: Import react-hot-toast
 
 const API_URL = 'http://localhost:5000/api/patients';
 
 const PatientManagement = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [patients, setPatients] = useState([]); // Initial state is an empty array
+  const [patients, setPatients] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
 
@@ -17,23 +19,22 @@ const PatientManagement = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [editingPatientData, setEditingPatientData] = useState(null);
 
+  // NEW: State for the delete confirmation modal
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState(null);
+
   const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   // --- API Communication ---
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token'); // Assumes token is stored in localStorage after login
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
+    const token = localStorage.getItem('token');
+    return { headers: { Authorization: `Bearer ${token}` } };
   };
 
   const fetchPatients = async () => {
     try {
       const response = await axios.get(API_URL, getAuthHeaders());
-      // Calculate age for each patient before setting the state
       const patientsWithAge = response.data.map(p => ({
         ...p,
         age: p.birthdate ? new Date().getFullYear() - new Date(p.birthdate).getFullYear() : 'N/A',
@@ -41,11 +42,11 @@ const PatientManagement = () => {
       setPatients(patientsWithAge);
     } catch (error) {
       console.error('Failed to fetch patients:', error);
-      alert('Failed to fetch patients. Please make sure you are logged in.');
+      // MODIFIED: Use toast for errors
+      toast.error('Failed to fetch patients. Please log in.');
     }
   };
 
-  // Fetch patients on component mount
   useEffect(() => {
     fetchPatients();
   }, []);
@@ -53,55 +54,59 @@ const PatientManagement = () => {
   const handleAddPatient = async (e) => {
     e.preventDefault();
     if (!newPatient.name || !newPatient.nik) {
-      alert('Please fill in at least the NIK and Name fields.');
+      toast.error('Please fill in at least the NIK and Name fields.');
       return;
     }
     try {
       await axios.post(API_URL, newPatient, getAuthHeaders());
-      alert('Patient successfully added!');
+      toast.success('Patient successfully added!');
       setShowAddForm(false);
       setNewPatient({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
-      fetchPatients(); // Re-fetch to update the list
+      fetchPatients();
     } catch (error) {
       console.error('Error adding patient:', error);
-      alert(`Error: ${error.response?.data?.message || 'Could not add patient.'}`);
+      toast.error(error.response?.data?.message || 'Could not add patient.');
     }
   };
 
-const handleUpdatePatient = async (e) => {
-  e.preventDefault();
-  try {
-    // This sends the complete, updated patient data object to the API.
-    await axios.put(
-      `${API_URL}/${editingPatientData._id}`, 
-      editingPatientData, // The entire state object is sent as the body.
-      getAuthHeaders()
-    );
+  const handleUpdatePatient = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API_URL}/${editingPatientData._id}`, editingPatientData, getAuthHeaders());
+      toast.success('Patient details successfully updated!');
+      setIsEditModalOpen(false);
+      fetchPatients();
+    } catch (error) {
+      console.error('Error updating patient:', error);
+      toast.error(error.response?.data?.message || 'Could not update patient.');
+    }
+  };
 
-    alert('Patient details successfully updated!');
-    setIsEditModalOpen(false);
-    fetchPatients(); // Re-fetch to update the list with new data.
-  } catch (error) {
-    console.error('Error updating patient:', error);
-    alert(`Error: ${error.response?.data?.message || 'Could not update patient.'}`);
-  }
-};
-
-  const handleDeletePatient = async (patientId) => {
-    if (window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+  // NEW: This function now confirms the deletion after modal confirmation
+  const handleConfirmDelete = async () => {
+    if (patientToDelete) {
       try {
-        await axios.delete(`${API_URL}/${patientId}`, getAuthHeaders());
-        alert('Patient successfully deleted!');
-        setIsEditModalOpen(false); // Also close the edit modal if deletion happens from there
-        fetchPatients(); // Re-fetch to update the list
+        await axios.delete(`${API_URL}/${patientToDelete}`, getAuthHeaders());
+        toast.success('Patient successfully deleted!');
+        setIsEditModalOpen(false);
+        fetchPatients();
       } catch (error) {
         console.error('Error deleting patient:', error);
-        alert(`Error: ${error.response?.data?.message || 'Could not delete patient.'}`);
+        toast.error(error.response?.data?.message || 'Could not delete patient.');
+      } finally {
+        setDeleteModalOpen(false);
+        setPatientToDelete(null);
       }
     }
   };
 
-  // --- Helper Functions for UI ---
+  // --- UI Handlers ---
+
+  // NEW: This function opens the confirmation modal
+  const handleOpenDeleteModal = (patientId) => {
+    setPatientToDelete(patientId);
+    setDeleteModalOpen(true);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -119,7 +124,6 @@ const handleUpdatePatient = async (e) => {
   };
 
   const handleEdit = (patient) => {
-    // Format birthdate for the date input if it exists
     const patientData = {
         ...patient,
         birthdate: patient.birthdate ? new Date(patient.birthdate).toISOString().split('T')[0] : ''
@@ -147,7 +151,7 @@ const handleUpdatePatient = async (e) => {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-800">Admin - Patient Management</h1>
             <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-              {showAddForm ? '×' : 'Add New Patient'}
+              {showAddForm ? '×' : <div className="flex items-center gap-2"><UserPlus size={16}/> Add Patient</div>}
             </button>
           </div>
 
@@ -173,9 +177,7 @@ const handleUpdatePatient = async (e) => {
                   ))}
                 </div>
                 <div className="flex justify-end mt-6">
-                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                    Add Patient
-                  </button>
+                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">Add Patient</button>
                 </div>
               </form>
             </div>
@@ -183,7 +185,6 @@ const handleUpdatePatient = async (e) => {
 
           <div className="space-y-4">
             {patients.map((patient) => (
-              // Use patient._id from MongoDB as the key
               <div key={patient._id} className="bg-white p-4 rounded-lg shadow-md flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-gray-800">{patient.nik}</p>
@@ -191,12 +192,8 @@ const handleUpdatePatient = async (e) => {
                   <p className="text-sm text-gray-500">{patient.gender}, {patient.age} Years Old</p>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={() => handleSeeDetail(patient)} className="bg-white border border-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition">
-                    See Detail
-                  </button>
-                  <button onClick={() => handleEdit(patient)} className="bg-blue-100 text-blue-700 font-semibold px-4 py-2 rounded-lg hover:bg-blue-200 transition">
-                    Edit
-                  </button>
+                  <button onClick={() => handleSeeDetail(patient)} className="bg-white border border-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg hover:bg-gray-50 transition">See Detail</button>
+                  <button onClick={() => handleEdit(patient)} className="bg-blue-100 text-blue-700 font-semibold px-4 py-2 rounded-lg hover:bg-blue-200 transition">Edit</button>
                 </div>
               </div>
             ))}
@@ -239,22 +236,26 @@ const handleUpdatePatient = async (e) => {
                   ))}
                 </div>
                 <div className="flex justify-between items-center mt-6">
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePatient(editingPatientData._id)}
-                    className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700 transition"
-                  >
-                    Delete Patient
-                  </button>
-                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                    Save Changes
-                  </button>
+                  {/* MODIFIED: Delete button now opens the confirmation modal */}
+                  <button type="button" onClick={() => handleOpenDeleteModal(editingPatientData._id)} className="flex items-center gap-2 bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition"><Trash2 size={16} /> Delete Patient</button>
+                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">Save Changes</button>
                 </div>
               </form>
             )}
           </Modal>
         </div>
       </div>
+
+      {/* NEW: Render the confirmation modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Patient"
+        confirmText="Delete"
+      >
+        Are you sure you want to delete this patient? This action cannot be undone.
+      </ConfirmationModal>
     </>
   );
 };
