@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AppHeader from "../../components/AppHeader";
+import LoginAppHeader from "../../components/LoginAppHeader";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -20,6 +20,7 @@ const LoginForm = () => {
     setError("");
 
     try {
+<<<<<<< Updated upstream
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -44,6 +45,16 @@ const LoginForm = () => {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
+=======
+      // Simulate successful login
+      //otherwise make an API call to verify credentials
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", email);
+
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Invalid credentials");
+>>>>>>> Stashed changes
     }
   };
 
@@ -52,7 +63,7 @@ const LoginForm = () => {
       <div className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md">
         <div className="w-full max-w-sm mx-auto">
           <div className="relative text-center">
-            <AppHeader subtitle={`Welcome, ${role}!`} />
+            <LoginAppHeader subtitle={`Welcome, ${role}!`} />
           </div>
           <div>
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
