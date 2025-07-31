@@ -28,7 +28,7 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4">
-          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors">
+          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg text-blue-600 font-semibold hover:bg-gray-100 transition-colors">
             Cancel
           </button>
           <button onClick={onConfirm} className="w-full px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
