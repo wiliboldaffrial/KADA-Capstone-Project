@@ -10,6 +10,7 @@ import PatientManagement from './pages/Admin/PatientManagement';
 import RoomManagement from './pages/Admin/RoomManagement';
 import PatientCheckup from './pages/Doctor/PatientCheckup';
 import PatientList from './pages/Nurse/PatientList';
+import Announcement from './pages/Announcement';
 
 
 // Main App Component
@@ -22,6 +23,7 @@ export default function App() {
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/signup" element={<SignUpForm />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/announcement" element={<Announcement />} />
                 <Route path="/admin/appointmentSchedule" element={<AppointmentSchedule/>}></Route>
                 <Route path="/admin/patientManagement" element={<PatientManagement/>}></Route>
                 <Route path="/admin/roomManagement" element={<RoomManagement/>}></Route>
