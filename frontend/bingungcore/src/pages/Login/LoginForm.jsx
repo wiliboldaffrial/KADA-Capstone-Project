@@ -20,7 +20,6 @@ const LoginForm = () => {
     setError("");
 
     try {
-<<<<<<< Updated upstream
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -45,16 +44,6 @@ const LoginForm = () => {
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
-=======
-      // Simulate successful login
-      //otherwise make an API call to verify credentials
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("userEmail", email);
-
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Invalid credentials");
->>>>>>> Stashed changes
     }
   };
 
