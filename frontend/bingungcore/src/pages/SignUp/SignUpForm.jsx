@@ -1,135 +1,102 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
-import AppHeader from "../../components/AppHeader";
+import { useNavigate } from "react-router-dom";
+import AppHeader from "../../components/LoginAppHeader";
 
-// Component for the Sign Up page
 const SignUpForm = () => {
 
     const navigate = useNavigate();
 
-  // State for form inputs
+  // Form input states
   const [role, setRole] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // State for validation errors
+  // Validation error states
   const [roleError, setRoleError] = useState("");
   const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
-  // # State to track if a field has been "touched" (blurred) by the user
+  // Touched input tracking
   const [roleTouched, setRoleTouched] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
-  // # State to track if the form has been submitted at least once
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // State for form submission status
-  const [isLoading, setIsLoading] = useState(false); // # Indicates if an API call is in progress
-  const [submissionMessage, setSubmissionMessage] = useState(""); // # Message after submission (success/error)
-  const [isSuccess, setIsSuccess] = useState(false); // # To style submission message
-
-    const handleReturnToRoleSelection = () => {
-        navigate('/');
-    }
-
-  // Function to validate all form fields
   const validateForm = () => {
     let isValid = true;
-
-    // Reset all errors before re-validating
     setRoleError("");
     setNameError("");
     setEmailError("");
     setPasswordError("");
     setConfirmPasswordError("");
-    // # submissionMessage and isSuccess are reset only on handleSubmit
 
-    // Role Validation
     if (!role) {
       setRoleError("Please choose a role.");
       isValid = false;
     }
 
-    // Name Validation
-    const nameTrimmed = name.trim();
-    if (!nameTrimmed) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       setNameError("Name is required.");
       isValid = false;
-    } else if (nameTrimmed.length < 2) {
+    } else if (trimmedName.length < 2) {
       setNameError("Name must be at least 2 characters.");
       isValid = false;
-    } else if (nameTrimmed.length > 50) {
+    } else if (trimmedName.length > 50) {
       setNameError("Name cannot exceed 50 characters.");
       isValid = false;
-    } else if (!/^[a-zA-Z\s'-]+$/.test(nameTrimmed)) {
+    } else if (!/^[a-zA-Z\s'-]+$/.test(trimmedName)) {
       setNameError("Name can only contain letters, spaces, hyphens, and apostrophes.");
       isValid = false;
     }
 
-    // Email Validation
-    const emailTrimmed = email.trim();
-    if (!emailTrimmed) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       setEmailError("Email is required.");
       isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(emailTrimmed)) {
+    } else if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
       setEmailError("Please enter a valid email address.");
       isValid = false;
     }
 
-    // Password Validation
-    const passwordTrimmed = password.trim();
-    if (!passwordTrimmed) {
+    const trimmedPassword = password.trim();
+    if (!trimmedPassword) {
       setPasswordError("Password is required.");
       isValid = false;
-    } else if (passwordTrimmed.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
+    } else if (trimmedPassword.length < 8 || trimmedPassword.length > 64) {
+      setPasswordError("Password must be 8-64 characters.");
       isValid = false;
-    } else if (passwordTrimmed.length > 64) {
-      setPasswordError("Password cannot exceed 64 characters.");
-      isValid = false;
-    } else if (/\s/.test(passwordTrimmed)) {
-      // Explicitly disallow spaces
+    } else if (/\s/.test(trimmedPassword)) {
       setPasswordError("Password cannot contain spaces.");
       isValid = false;
     } else {
-      // # Enforce all four complexity types: uppercase, lowercase, number, special character
-      let errors = [];
-      if (!/[A-Z]/.test(passwordTrimmed)) {
-        errors.push("uppercase letter");
-      }
-      if (!/[a-z]/.test(passwordTrimmed)) {
-        errors.push("lowercase letter");
-      }
-      if (!/[0-9]/.test(passwordTrimmed)) {
-        errors.push("number");
-      }
-      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~` ]/.test(passwordTrimmed)) {
-        errors.push("special character");
-      }
+      const missing = [];
+      if (!/[A-Z]/.test(trimmedPassword)) missing.push("uppercase letter");
+      if (!/[a-z]/.test(trimmedPassword)) missing.push("lowercase letter");
+      if (!/[0-9]/.test(trimmedPassword)) missing.push("number");
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~` ]/.test(trimmedPassword)) missing.push("special character");
 
-      if (errors.length > 0) {
-        // # Join multiple missing requirements into a single, clear message
-        setPasswordError(`Password must contain at least one ${errors.join(", ")}.`);
+      if (missing.length) {
+        setPasswordError(`Password must contain at least one ${missing.join(", ")}.`);
         isValid = false;
-      } else {
-        setPasswordError(""); // # Clear error if all complexity rules are met
       }
     }
 
-    // Confirm Password Validation
-    const confirmPasswordTrimmed = confirmPassword.trim();
-    if (!confirmPasswordTrimmed) {
+    const trimmedConfirm = confirmPassword.trim();
+    if (!trimmedConfirm) {
       setConfirmPasswordError("Confirm password is required.");
       isValid = false;
-    } else if (confirmPasswordTrimmed !== passwordTrimmed) {
+    } else if (trimmedConfirm !== trimmedPassword) {
       setConfirmPasswordError("Passwords do not match.");
       isValid = false;
     }
@@ -137,13 +104,9 @@ const SignUpForm = () => {
     return isValid;
   };
 
-  // # Use useEffect to re-validate the form whenever any relevant input state changes
   useEffect(() => {
-    // # This ensures that error messages and the button's disabled state update in real-time
     validateForm();
-  }, [role, name, email, password, confirmPassword]); // # Dependencies: re-run when any of these change
-
-  // Update the handleSubmit function:
+  }, [role, name, email, password, confirmPassword]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

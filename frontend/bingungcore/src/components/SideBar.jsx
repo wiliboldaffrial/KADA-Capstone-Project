@@ -33,7 +33,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
       { path: "/admin/roomManagement", label: "Room Management", iconType: "room" },
     ],
     doctor: [{ path: "/doctor/patientCheckup/:id", label: "Patient List" }],
-    nurse: [{ path: "/patientList", label: "Patient List" }],
+    nurse: [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
 
   const linksToShow = [...commonLinks, ...(roleBasedLinks[role] || [])];
