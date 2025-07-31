@@ -143,17 +143,15 @@ const SignUpForm = () => {
     validateForm();
   }, [role, name, email, password, confirmPassword]); // # Dependencies: re-run when any of these change
 
+  // Update the handleSubmit function:
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormSubmitted(true); // # Set formSubmitted to true on submission attempt
-    // Run all front-end validations one last time before submission
+    setFormSubmitted(true);
     if (validateForm()) {
-      setIsLoading(true); // # Set loading state to true
+      setIsLoading(true);
       try {
-        // # This is where you would make an API call to your backend
-        // # Replace '/api/register' with your actual backend registration endpoint
-        // # Replace 'http://localhost:5000' with your backend server URL if different
-        const response = await fetch("http://localhost:5000/api/register", {
+        const response = await fetch("http://localhost:5000/api/auth/register", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -163,28 +161,30 @@ const SignUpForm = () => {
             name: name.trim(),
             email: email.trim(),
             password: password.trim(),
-            // # confirmPassword is not typically sent to the backend
           }),
         });
 
-        const data = await response.json(); // # Assuming your backend returns JSON
+        const data = await response.json();
 
         if (response.ok) {
-          localStorage.setItem('role', role.toLowerCase());
-          setSubmissionMessage("Registration successful! Redirecting to ");
+          setSubmissionMessage("Registration successful! Redirecting to login...");
           setIsSuccess(true);
-          navigate('/login'); // # Redirect to login page on success
+          localStorage.setItem('role', role.toLowerCase());
+          // Wait 2 seconds before redirecting
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        } else {
+          setSubmissionMessage(data.message || "Registration failed");
+          setIsSuccess(false);
         }
       } catch (error) {
-        // # Handle network errors or other unexpected issues
         setSubmissionMessage("Network error. Please try again later.");
         setIsSuccess(false);
-        console.error("Error during registration:", error);
       } finally {
-        setIsLoading(false); // # Always set loading state to false after request completes
+        setIsLoading(false);
       }
     } else {
-      // If validation fails, errors are already set by validateForm()
       setSubmissionMessage("Please correct the errors in the form.");
       setIsSuccess(false);
     }
@@ -213,13 +213,13 @@ const SignUpForm = () => {
                     <option value="" disabled hidden>
                         Choose a role
                     </option>
-                    <option id="admin" value="Admin">
+                    <option id="admin" value="admin/receptionist">
                         Admin/Receptionist
                     </option>
-                    <option id="nurse" value="Nurse">
+                    <option id="nurse" value="nurse">
                         Nurse
                     </option>
-                    <option id="doctor" value="Doctor">
+                    <option id="doctor" value="doctor">
                         Doctor
                     </option>
                     </select>

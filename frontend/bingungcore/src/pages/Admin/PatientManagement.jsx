@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Search } from 'lucide-react';
 import Modal from '../../components/Modal'; // Make sure this path is correct
 import SideBar from '../../components/SideBar';
+import axios from 'axios';
 
 const initialPatients = [
   { id: 1, nik: '320101012345678', name: 'Alice', gender: 'Female', age: 20, birthdate: '2005-05-10', bloodType: 'O', contact: '081234567890', address: '123 Wonderland Ave', medicalHistory: 'None' },
@@ -16,7 +17,7 @@ const PatientManagement = () => {
     
   const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
-  const [patients, setPatients] = useState(initialPatients);
+  const [patients, setPatients] = useState();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ nik: '', name: '', gender: '', birthdate: '', bloodType: '', contact: '', address: '', medicalHistory: '' });
 
