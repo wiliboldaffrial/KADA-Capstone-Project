@@ -1,41 +1,36 @@
-// src/components/ExpandedPatientDetails.js
 import React, { useState } from 'react';
 
-const ExpandedPatientDetails = ({ patient }) => {
+const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
     const [selectedCheckup, setSelectedCheckup] = useState(null);
     const [isAddingCheckup, setIsAddingCheckup] = useState(false);
     const [newCheckupNotes, setNewCheckupNotes] = useState("");
-    const [checkups, setCheckups] = useState(patient.checkups);
 
-    const handleAddCheckup = () => {
+    const handleAddClick = () => {
         if (newCheckupNotes.trim() === "") return;
 
         const newCheckup = {
-            id: `c${checkups.length + 1}`,
+            id: `c${patient.checkups.length + 1}`,
             date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
             details: { notes: newCheckupNotes }
         };
 
-        setCheckups([newCheckup, ...checkups]);
+        // Call the function from the parent to update the main state
+        onAddCheckup(patient.id, newCheckup);
+
         setNewCheckupNotes("");
         setIsAddingCheckup(false);
     };
 
     return (
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 border-t">
-            {/* Left Column: Patient Info and Checkup List */}
+            {/* Left Column */}
             <div className="flex flex-col space-y-4">
-                <div>
-                    <h4 className="font-bold mb-2">Patient Information</h4>
-                    <div className="text-sm space-y-1">
-                        <p><strong>ID:</strong> {patient.details.idNumber}</p>
-                        <p><strong>Condition:</strong> {patient.details.condition}</p>
-                    </div>
-                </div>
+                {/* ... Patient Info Card ... */}
                 <div className="p-4 bg-white rounded-lg border flex-grow">
                     <h4 className="font-bold mb-3">Checkup History</h4>
                     <div className="space-y-2 mb-4">
-                        {checkups.map(checkup => (
+                        {/* Now uses patient.checkups directly from props */}
+                        {patient.checkups.map(checkup => (
                             <div key={checkup.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
                                 <span>{checkup.date}</span>
                                 <button
@@ -62,11 +57,10 @@ const ExpandedPatientDetails = ({ patient }) => {
                 </div>
             </div>
 
-            {/* Right Column: Dynamic Detail/Add Form View */}
+            {/* Right Column */}
             <div className="p-4 bg-white rounded-lg border">
                 <h4 className="font-bold mb-2">Details</h4>
                 {isAddingCheckup ? (
-                    // FIX: Simplified the flex container for the "Add Checkup" form.
                     <div className="flex flex-col">
                         <textarea
                             value={newCheckupNotes}
@@ -76,7 +70,8 @@ const ExpandedPatientDetails = ({ patient }) => {
                             rows="10"
                         ></textarea>
                         <div className="flex justify-end mt-2">
-                            <button onClick={handleAddCheckup} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
+                            {/* This button now calls handleAddClick */}
+                            <button onClick={handleAddClick} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
                                 Add
                             </button>
                         </div>
