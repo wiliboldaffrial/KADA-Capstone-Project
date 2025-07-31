@@ -15,7 +15,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
 
   const commonLinks = [
     { path: "/dashboard", label: "Dashboard", iconType: "dashboard" },
-    { path: "/addAnnouncement", label: "Announcement", iconType: "announcement" },
+    { path: "/announcement", label: "Announcement", iconType: "announcement" },
   ];
 
   const roleBasedLinks = {
