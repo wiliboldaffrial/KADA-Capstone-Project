@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, parseISO, parse } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Edit, Trash2 } from 'lucide-react';
 import SideBar from '../../components/SideBar';
-import axios from 'axios';
 
 // Define a list of doctors for the selection menu
 const doctors = ['Dr. Dumbledore', 'Dr. Snape', 'Dr. McGonagall', 'Dr. Sprout'];
