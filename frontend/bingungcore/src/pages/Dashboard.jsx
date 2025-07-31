@@ -81,11 +81,11 @@ const Dashboard = () => {
               <div class="col-span-1 grid grid-cols-1 gap-4">
                 <div class="bg-blue-600 text-white rounded-md p-4">
                   <h4 class="font-semibold mb-2">Patient per Day</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                  <div class="h-40 flex items-center justify-center text-sm">{<PatientChartDay/>}</div>
                 </div>
                 <div class="bg-white rounded-md shadow p-4">
                   <h4 class="font-semibold mb-2">Patient per Month</h4>
-                  <div class="h-32 flex items-center justify-center text-sm">[Graph Placeholder]</div>
+                  <div class="h-40 flex items-center justify-center text-sm">{<PatientBarChart/>}</div>
                 </div>
               </div>
             </div>
