@@ -1,9 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const passport = require('passport');
-const connectDB = require('./db');
-require('dotenv').config();
-require('./config/passport'); // Add this line
+const express = require("express");
+const cors = require("cors");
+const passport = require("passport");
+const connectDB = require("./db");
+require("dotenv").config();
+require("./config/passport");
 
 const app = express();
 
@@ -16,19 +16,21 @@ app.use(passport.initialize());
 connectDB();
 
 // Define routes
-const authRoutes = require('./routes/authentication');
-const patientRoutes = require('./routes/patientRoutes');
-const checkupRoutes = require('./routes/checkupRoutes');
-const announcementRoutes = require('./routes/announcementRoutes');
-const appointmentRoutes = require('./routes/appointmentRoutes');
-const roomRoutes = require('./routes/roomRoutes');
+const authRoutes = require("./routes/authentication");
+const patientRoutes = require("./routes/patientRoutes");
+const checkupRoutes = require("./routes/checkupRoutes");
+const announcementRoutes = require("./routes/announcementRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
+const userRoutes = require("./routes/userRoutes");
+const roomRoutes = require("./routes/roomRoutes");
 
-app.use('/api/auth', authRoutes);
-app.use('/api/patients', passport.authenticate('jwt', { session: false }), patientRoutes);
-app.use('/api/checkups', passport.authenticate('jwt', { session: false }), checkupRoutes);
-app.use('/api/announcements', passport.authenticate('jwt', { session: false }), announcementRoutes);
-app.use('/api/appointments', passport.authenticate('jwt', { session: false }), appointmentRoutes);
-app.use('/api/rooms', passport.authenticate('jwt', { session: false }), roomRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/patients", passport.authenticate("jwt", { session: false }), patientRoutes);
+app.use("/api/checkups", passport.authenticate("jwt", { session: false }), checkupRoutes);
+app.use("/api/announcements", passport.authenticate("jwt", { session: false }), announcementRoutes);
+app.use("/api/appointments", passport.authenticate("jwt", { session: false }), appointmentRoutes);
+app.use("/api/users", passport.authenticate("jwt", { session: false }), userRoutes);
+app.use("/api/rooms", passport.authenticate("jwt", { session: false }), roomRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
