@@ -18,6 +18,7 @@ import { Toaster } from "react-hot-toast";
 export default function App() {
   return (
     <>
+    <UserProvider>
       <Router>
         <Routes>
           <Route path="/" element={<RoleSelection />} />
@@ -33,6 +34,8 @@ export default function App() {
           <Route path="/doctor/patient/:_id" element={<PatientCheckup />} />
         </Routes>
       </Router>
+    </UserProvider>
+      
       <Toaster
         position="bottom-right"
         toastOptions={{
