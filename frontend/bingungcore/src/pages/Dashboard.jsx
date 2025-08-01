@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import SideBar from "../components/SideBar";
 import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
-import axios from 'axios';
-import { format, isToday } from 'date-fns';
-import { toast } from 'react-hot-toast';
+import axios from "axios";
+import { format, isToday } from "date-fns";
+import { toast } from "react-hot-toast";
 
 // Define API URLs
 const PATIENTS_API_URL = 'http://localhost:5000/api/patients';
@@ -16,7 +16,7 @@ const Dashboard = () => {
   console.log("Dashboard component is rendering.");
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+
   // NEW: State for dynamic dashboard data
   const [patientCount, setPatientCount] = useState(0);
   const [availableRooms, setAvailableRooms] = useState(0);
@@ -42,44 +42,42 @@ const Dashboard = () => {
   // NEW: Fetch all necessary dashboard data on component mount
   useEffect(() => {
     const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return { headers: { Authorization: `Bearer ${token}` } };
+      const token = localStorage.getItem("token");
+      return { headers: { Authorization: `Bearer ${token}` } };
     };
 
     const fetchDashboardData = async () => {
-        try {
-            // Use Promise.all to fetch data concurrently
-            const [patientRes, appointmentRes, announcementRes, roomRes] = await Promise.all([
-                axios.get(PATIENTS_API_URL, getAuthHeaders()),
-                axios.get(APPOINTMENTS_API_URL, getAuthHeaders()),
-                axios.get(ANNOUNCEMENTS_API_URL, getAuthHeaders()),
-                 axios.get(ROOMS_API_URL, getAuthHeaders())
-            ]);
+      try {
+        // Use Promise.all to fetch data concurrently
+        const [patientRes, appointmentRes, announcementRes, roomRes] = await Promise.all([
+          axios.get(PATIENTS_API_URL, getAuthHeaders()),
+          axios.get(APPOINTMENTS_API_URL, getAuthHeaders()),
+          axios.get(ANNOUNCEMENTS_API_URL, getAuthHeaders()),
+          axios.get(ROOMS_API_URL, getAuthHeaders()),
+        ]);
 
-            // 1. Set total patient count
-            setPatientCount(patientRes.data.length);
+        // 1. Set total patient count
+        setPatientCount(patientRes.data.length);
 
-            // 2. Filter for today's appointments
-            const todayApps = appointmentRes.data.filter(app => isToday(new Date(app.dateTime)));
-            setTodaysAppointments(todayApps);
-            
-            // 3. Get the latest announcement
-            if (announcementRes.data.length > 0) {
-                setLatestAnnouncement(announcementRes.data[0]); // Assumes the backend sorts by most recent
-            }
-            // 4. Calculate and set available rooms count
-            const availableCount = roomRes.data.filter(room => room.status === 'Available').length;
-            setAvailableRooms(availableCount);
+        // 2. Filter for today's appointments
+        const todayApps = appointmentRes.data.filter((app) => isToday(new Date(app.dateTime)));
+        setTodaysAppointments(todayApps);
 
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-            toast.error("Could not load dashboard data. Please log in.");
+        // 3. Get the latest announcement
+        if (announcementRes.data.length > 0) {
+          setLatestAnnouncement(announcementRes.data[0]); // Assumes the backend sorts by most recent
         }
+        // 4. Calculate and set available rooms count
+        const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
+        setAvailableRooms(availableCount);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        toast.error("Could not load dashboard data. Please log in.");
+      }
     };
 
     fetchDashboardData();
   }, []);
-
 
   return (
     <>
@@ -91,9 +89,7 @@ const Dashboard = () => {
             <div className="border rounded-full px-4 py-2 w-full mb-4">
               <div className="flex items-center justify-between">
                 <p>
-                  <span className={`font-bold ${latestAnnouncement.urgency === 'urgent' ? 'text-red-500' : ''}`}>
-                    {latestAnnouncement.title}
-                  </span>
+                  <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
                   <span className="text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
                 </p>
                 <div className="flex items-center flex-shrink-0 ml-4">
@@ -143,15 +139,19 @@ const Dashboard = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-blue-600 text-white rounded-md p-4">
                 <h4 className="font-semibold mb-2">Patient per Day</h4>
-                <div className="h-40 flex items-center justify-center text-sm"><PatientChartDay /></div>
+                <div className="h-40 flex items-center justify-center text-sm">
+                  <PatientChartDay />
+                </div>
               </div>
               <div className="bg-white rounded-md shadow p-4">
                 <h4 className="font-semibold mb-2">Patient per Month</h4>
-                <div className="h-40 flex items-center justify-center text-sm"><PatientBarChart /></div>
+                <div className="h-40 flex items-center justify-center text-sm">
+                  <PatientBarChart />
+                </div>
               </div>
             </div>
           </div>

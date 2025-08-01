@@ -1,24 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, LogOut, Hospital, Icon } from "lucide-react";
 import AppHeader from "./AppHeader";
 import SideBarItem from "./SideBarItem";
 import LogoutModal from "./LogoutModal";
-
-// src/components/SideBar.jsx
+import { useUser } from "../UserContext";
 
 const SideBar = ({ isCollapsed, toggleSideBar }) => {
-  const [isModalOpen, setModalOpen] = useState(false); // State for modal visibility
-  const role = localStorage.getItem("role")?.toLowerCase();
+  const [isModalOpen, setModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // This function will now be called by the modal's confirmation button
+  // Get user data from context
+  const { userName, userRole, loading } = useUser();
+
+  // Note: We no longer need to fetch user data here.
+  // The useEffect hook is now gone from this file.
+
   const handleLogout = () => {
     localStorage.removeItem("role");
-    // Also remove the JWT token if you have one
     localStorage.removeItem("token");
-    setModalOpen(false); // Close the modal
-    navigate("/"); // Redirect to login/home
+    setModalOpen(false);
+    navigate("/");
   };
 
   const commonLinks = [
@@ -36,13 +38,22 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
     nurse: [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
 
-  const linksToShow = [...commonLinks, ...(roleBasedLinks[role] || [])];
+  // We use the userRole from context now, not localStorage
+  const linksToShow = [...commonLinks, ...(roleBasedLinks[userRole] || [])];
 
-  React.useEffect(() => {
-    if (!role) {
-      navigate("/");
-    }
+  // We can add a simple loading check here if needed
+  if (loading) {
+    return null; // Or return a loading spinner if you prefer
+  }
+
+  // We moved the redirect logic to the UserProvider, so we don't need this anymore
+  /*
+  useEffect(() => {
+      if (!role) {
+          navigate("/");
+      }
   }, [role, navigate]);
+  */
 
   return (
     <>
@@ -53,14 +64,11 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
           </button>
 
           <nav className="mt-6 px-2 flex-grow">
-            {/* MediLink Logo */}
             <div className="flex justify-center items-center mb-2">
               <h2 className="text-white text-sm">
                 <AppHeader mode="sidebar" isCollapsed={isCollapsed} />
               </h2>
             </div>
-
-            {/* Pages */}
             <ul className="space-y-2">
               {linksToShow.map((item) => (
                 <SideBarItem key={item.path} path={item.path} label={item.label} iconType={item.iconType} isCollapsed={isCollapsed} />
@@ -68,20 +76,18 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
             </ul>
           </nav>
 
-          {/* Profile and logout button */}
           <div className="mt-auto p-4 border-t border-white/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 overflow-hidden">
                 <img className="w-8 h-8 rounded-full border border-white object-cover flex-shrink-0" alt="User" />
                 {!isCollapsed && (
                   <div className="text-white text-sm truncate">
-                    <p className="font-semibold">Username</p>
-                    <p className="text-xs text-gray-300 capitalize">{role}</p>
+                    {/* <-- MODIFIED: Use the userName from the context */}
+                    <p className="font-semibold">{userName || "Loading..."}</p>
+                    <p className="text-xs text-gray-300 capitalize">{userRole}</p>
                   </div>
                 )}
               </div>
-
-              {/*Logout button now opens the modal */}
               <button onClick={() => setModalOpen(true)} className="p-2 text-white hover:bg-blue-700 rounded-lg transition-colors" aria-label="Logout">
                 <LogOut size={20} />
               </button>
@@ -89,8 +95,6 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
           </div>
         </aside>
       </div>
-
-      {/* RENDER THE MODAL HERE */}
       <LogoutModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} onConfirm={handleLogout} />
     </>
   );
