@@ -21,12 +21,14 @@ const patientRoutes = require('./routes/patientRoutes');
 const checkupRoutes = require('./routes/checkupRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const roomRoutes = require('./routes/roomRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', passport.authenticate('jwt', { session: false }), patientRoutes);
 app.use('/api/checkups', passport.authenticate('jwt', { session: false }), checkupRoutes);
 app.use('/api/announcements', passport.authenticate('jwt', { session: false }), announcementRoutes);
 app.use('/api/appointments', passport.authenticate('jwt', { session: false }), appointmentRoutes);
+app.use('/api/rooms', passport.authenticate('jwt', { session: false }), roomRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
