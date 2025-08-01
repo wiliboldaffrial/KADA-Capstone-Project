@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SideBar from "../components/SideBar";
-import { Outlet } from 'react-router-dom';
+import axios from "axios";
+import { Outlet } from "react-router-dom";
 import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
+import { formatDistanceToNow } from "date-fns";
 
 const appointmentsToday = [
-  { id: 1, name: "Sam Strand", doctor: "Dr. Deadman", status: "ulululu"},
+  { id: 1, name: "Sam Strand", doctor: "Dr. Deadman", status: "ulululu" },
   { id: 2, name: "Heartman", doctor: "Dr. Deadman", status: "Waiting" },
   { id: 3, name: "Mama", doctor: "Dr. Deadman", status: "Scheduled" },
   { id: 4, name: "Lockne", doctor: "Dr. Deadman", status: "Scheduled" },
@@ -14,9 +16,43 @@ const appointmentsToday = [
 ];
 
 const Dashboard = () => {
+  console.log("Dashboard component is rendering.");
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [latestAnnouncement, setLatestAnnouncement] = useState(null);
 
   const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+
+  // Helper function to get authentication headers from localStorage
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    console.log("Token from localStorage:", token);
+    if (!token) {
+      return {};
+    }
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
+  useEffect(() => {
+    const fetchLatestAnnouncement = async () => {
+      try {
+        // Correctly pass the authentication headers to the axios request
+        const res = await axios.get("http://localhost:5000/api/announcements", getAuthHeaders());
+        console.log("Announcements fetched successfully:", res.data);
+        if (res.data && res.data.length > 0) {
+          setLatestAnnouncement(res.data[0]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch announcements:", err);
+        setLatestAnnouncement(null);
+      }
+    };
+    fetchLatestAnnouncement();
+  }, []);
 
   return (
     <>
@@ -26,17 +62,16 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <div className="border rounded-full px-4 py-2 w-full">
               <div className="flex items-center justify-between">
-                <p>New Announcement</p>
+                <p>{latestAnnouncement ? latestAnnouncement.content : "No announcements yet."}</p>
                 <div className="flex items-center">
-                  <span className="text-sm text-gray-500 pr-3">1 minute ago</span>
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                  <span className="text-sm text-gray-500 pr-3">{latestAnnouncement ? formatDistanceToNow(new Date(latestAnnouncement.createdAt), { addSuffix: true }) : null}</span>
+                  <span className={`w-3 h-3 rounded-full ${latestAnnouncement?.urgency ? "bg-red-500" : "bg-green-500"}`}></span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-4">
-            {/* 3 kotak dan today's appointments */}
             <div>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div className="bg-white shadow rounded-md p-4 text-center">
@@ -52,10 +87,8 @@ const Dashboard = () => {
                   <p className="text-gray-600">Rooms Available</p>
                 </div>
               </div>
-
               <div className="col-span-1 bg-white shadow rounded-md p-4 gap-4">
                 <h3 className="font-semibold text-lg mb-4">Today's Appointment</h3>
-                
                 <ul className="divide-y">
                   {appointmentsToday.map((appt) => (
                     <li key={appt.id} className="py-2 flex justify-between">
@@ -69,16 +102,15 @@ const Dashboard = () => {
                 </ul>
               </div>
             </div>
-            {/* Graphs */}
             <div className="">
               <div className="col-span-1 grid grid-cols-1 gap-4">
                 <div className="bg-blue-600 text-white rounded-md p-4">
                   <h4 className="font-semibold mb-2">Patient per Day</h4>
-                  <div className="h-40 flex items-center justify-center text-sm">{<PatientChartDay/>}</div>
+                  <div className="h-40 flex items-center justify-center text-sm">{<PatientChartDay />}</div>
                 </div>
                 <div className="bg-white rounded-md shadow p-4">
                   <h4 className="font-semibold mb-2">Patient per Month</h4>
-                  <div className="h-40 flex items-center justify-center text-sm">{<PatientBarChart/>}</div>
+                  <div className="h-40 flex items-center justify-center text-sm">{<PatientBarChart />}</div>
                 </div>
               </div>
             </div>
