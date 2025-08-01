@@ -4,25 +4,17 @@ import { ChevronLeft, ChevronRight, LogOut, Hospital, Icon } from "lucide-react"
 import AppHeader from "./AppHeader";
 import SideBarItem from "./SideBarItem";
 import LogoutModal from "./LogoutModal";
-import { jwtDecode } from "jwt-decode";
-import axios from "axios"; // <-- NEW: Import axios
+import { useUser } from "../UserContext";
 
 const SideBar = ({ isCollapsed, toggleSideBar }) => {
   const [isModalOpen, setModalOpen] = useState(false);
-  const role = localStorage.getItem("role")?.toLowerCase();
   const navigate = useNavigate();
 
-  const [userName, setUserName] = useState("User");
+  // Get user data from context
+  const { userName, userRole, loading } = useUser();
 
-  // Helper function to get authentication headers from localStorage
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
+  // Note: We no longer need to fetch user data here.
+  // The useEffect hook is now gone from this file.
 
   const handleLogout = () => {
     localStorage.removeItem("role");
@@ -46,36 +38,22 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
     nurse: [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
 
-  const linksToShow = [...commonLinks, ...(roleBasedLinks[role] || [])];
+  // We use the userRole from context now, not localStorage
+  const linksToShow = [...commonLinks, ...(roleBasedLinks[userRole] || [])];
 
+  // We can add a simple loading check here if needed
+  if (loading) {
+    return null; // Or return a loading spinner if you prefer
+  }
+
+  // We moved the redirect logic to the UserProvider, so we don't need this anymore
+  /*
   useEffect(() => {
-    const fetchUserName = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decoded = jwtDecode(token);
-          const userId = decoded.id; // <-- Get the user ID from the token
-
-          // Make a new API call to get the user's profile
-          const res = await axios.get(`http://localhost:5000/api/users/${userId}`, getAuthHeaders());
-
-          console.log("API response for user data:", res.data);
-          // Assuming the profile data has a 'name' property
-          if (res.data && res.data.name) {
-            setUserName(res.data.name);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user data:", error);
-          // If the API call fails, we will stick with the default "User" placeholder
-        }
-      }
       if (!role) {
-        navigate("/");
+          navigate("/");
       }
-    };
-
-    fetchUserName();
   }, [role, navigate]);
+  */
 
   return (
     <>
@@ -104,8 +82,9 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
                 <img className="w-8 h-8 rounded-full border border-white object-cover flex-shrink-0" alt="User" />
                 {!isCollapsed && (
                   <div className="text-white text-sm truncate">
-                    <p className="font-semibold">{userName}</p>
-                    <p className="text-xs text-gray-300 capitalize">{role}</p>
+                    {/* <-- MODIFIED: Use the userName from the context */}
+                    <p className="font-semibold">{userName || "Loading..."}</p>
+                    <p className="text-xs text-gray-300 capitalize">{userRole}</p>
                   </div>
                 )}
               </div>
