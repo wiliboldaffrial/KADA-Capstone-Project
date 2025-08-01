@@ -6,7 +6,7 @@ const Announcement = require('../models/Announcement');
 // Get all announcements
 router.get('/', async (req, res) => {
     try {
-        const announcements = await Announcement.find().sort({ date: -1 });
+        const announcements = await Announcement.find().sort({ createdAt: -1 });
         res.json(announcements);
     } catch (error) {
         res.status(500).json({ message: error.message });
