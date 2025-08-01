@@ -5,19 +5,13 @@ import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
 
 const appointmentsToday = [
-  { id: 1, name: "Sam Strand", doctor: "Dr. Deadman", status: "Waiting" },
+  { id: 1, name: "Sam Strand", doctor: "Dr. Deadman", status: "ulululu"},
   { id: 2, name: "Heartman", doctor: "Dr. Deadman", status: "Waiting" },
   { id: 3, name: "Mama", doctor: "Dr. Deadman", status: "Scheduled" },
   { id: 4, name: "Lockne", doctor: "Dr. Deadman", status: "Scheduled" },
   { id: 5, name: "Cliff Unger", doctor: "Dr. Deadman", status: "Scheduled" },
   { id: 6, name: "Lou", doctor: "Dr. Deadman", status: "Finished" },
 ];
-
-const statusColor = {
-  Waiting: "text-yellow-500",
-  Scheduled: "text-green-500",
-  Finished: "text-blue-500",
-};
 
 const Dashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -67,9 +61,9 @@ const Dashboard = () => {
                     <li key={appt.id} className="py-2 flex justify-between">
                       <div>
                         <p>{appt.name}</p>
-                        <p className="text-xs text-gray-500">Time with {appt.doctor}</p>
+                        <p className="text-xs text-gray-500">{appt.doctor}</p>
                       </div>
-                      <span className={statusColor[appt.status]}>{appt.status}</span>
+                      <span>{appt.status}</span>
                     </li>
                   ))}
                 </ul>
