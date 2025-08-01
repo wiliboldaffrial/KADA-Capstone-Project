@@ -3,6 +3,8 @@ import SideBar from "../components/SideBar";
 import Modal from "../components/Modal";
 import { formatDistanceToNow } from "date-fns";
 import axios from "axios";
+import { toast } from "react-hot-toast";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const API_URL = "http://localhost:5000/api/announcements";
 
@@ -17,7 +19,11 @@ const Announcement = () => {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
 
   const handleAddAnnouncement = async (e) => {
     e.preventDefault();
@@ -28,13 +34,13 @@ const Announcement = () => {
 
     try {
       await axios.post(API_URL, newAnnouncement, getAuthHeaders());
-      alert("Announcement successfully added!");
+      toast.success("Announcement successfully added!");
       setShowAddForm(false);
       setNewAnnouncement({ content: "", urgency: false });
       fetchAnnouncements(); // Re-fetch to update the list
     } catch (error) {
       console.error("Error adding announcement:", error);
-      alert(`Error: ${error.response?.data?.message || "Could not add announcement."}`);
+      toast.error(error.response?.data?.message || "Could not add announcement.");
     }
   };
 
@@ -43,16 +49,20 @@ const Announcement = () => {
     setNewAnnouncement((prevState) => ({ ...prevState, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleDeleteAnnouncement = async (announcementId) => {
-    if (window.confirm("Are you sure you want to delete this announcement? This action cannot be undone.")) {
+  const handleConfirmDelete = async () => {
+    if (announcementToDelete) {
       try {
-        await axios.delete(`${API_URL}/${announcementId}`, getAuthHeaders());
-        alert("Announcement successfully deleted!");
-        setIsEditModalOpen(false); // Also close the edit modal if deletion happens from there
-        fetchAnnouncements(); // Re-fetch to update the list
+        await axios.delete(`${API_URL}/${announcementToDelete}`, getAuthHeaders());
+        toast.success("Announcement successfully deleted!");
+        setSelectedAnnouncement(null);
+        setIsEditing(false);
+        fetchAnnouncements(); // Refresh list
       } catch (error) {
         console.error("Error deleting announcement:", error);
-        alert(`Error: ${error.response?.data?.message || "Could not delete announcement."}`);
+        toast.error(error.response?.data?.message || "Could not delete announcement.");
+      } finally {
+        setDeleteModalOpen(false);
+        setAnnouncementToDelete(null);
       }
     }
   };
@@ -60,6 +70,11 @@ const Announcement = () => {
   const handleViewAnnouncement = (announcement) => {
     setSelectedAnnouncement(announcement);
     setIsDetailModalOpen(true);
+  };
+
+  const handleOpenDeleteModal = (announcementId) => {
+    setAnnouncementToDelete(announcementId);
+    setDeleteModalOpen(true);
   };
 
   const formFields = [
@@ -161,7 +176,7 @@ const Announcement = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteAnnouncement(announcement._id);
+                      handleOpenDeleteModal(announcement._id);
                     }}
                     className="text-sm text-red-500 hover:text-red-700"
                   >
@@ -200,6 +215,10 @@ const Announcement = () => {
           </Modal>
         </div>
       </div>
+
+      <ConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Delete Announcement" confirmText="Delete">
+        Are you sure you want to delete this announcement? This action cannot be undone.
+      </ConfirmationModal>
     </>
   );
 };
