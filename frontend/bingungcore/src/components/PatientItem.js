@@ -2,7 +2,7 @@ import React from 'react';
 import { IconCaretUp, IconCaretDown } from './Icons';
 import ExpandedPatientDetails from './ExpandedPatientDetails';
 
-const PatientItem = ({ patient, onToggle, isExpanded }) => (
+const PatientItem = ({ patient, onToggle, isExpanded, onAddCheckup }) => (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between p-4">
             <p className="text-lg font-medium text-gray-800">{patient.name}</p>
@@ -13,7 +13,12 @@ const PatientItem = ({ patient, onToggle, isExpanded }) => (
                 </button>
             </div>
         </div>
-        {isExpanded && <ExpandedPatientDetails patient={patient} />}
+        {isExpanded && (
+            <ExpandedPatientDetails 
+                patient={patient} 
+                onAddCheckup={onAddCheckup} 
+            />
+        )}
     </div>
 );
 

@@ -33,7 +33,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
       { path: "/admin/roomManagement", label: "Room Management", iconType: "room" },
     ],
     doctor: [{ path: "/doctor/patientCheckup/:id", label: "Patient List" }],
-    nurse: [{ path: "/patientList", label: "Patient List" }],
+    nurse: [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
 
   const linksToShow = [...commonLinks, ...(roleBasedLinks[role] || [])];
@@ -81,7 +81,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
                 )}
               </div>
 
-              {/* MODIFIED: Logout button now opens the modal */}
+              {/*Logout button now opens the modal */}
               <button onClick={() => setModalOpen(true)} className="p-2 text-white hover:bg-blue-700 rounded-lg transition-colors" aria-label="Logout">
                 <LogOut size={20} />
               </button>
