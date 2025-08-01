@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 
 const announcementSchema = new mongoose.Schema({
-    title: String,
     content: String,
-    date: Date,
-    urgency: { type: String, enum: ['normal', 'urgent'], default: 'normal'},
-});
+    urgency: { type: Boolean, default: false},
+}, { timestamps: true });
 
 module.exports = mongoose.model('Announcement', announcementSchema);
