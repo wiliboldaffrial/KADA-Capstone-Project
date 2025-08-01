@@ -1,40 +1,41 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import SideBar from "../components/SideBar";
 import Modal from "../components/Modal";
 import { formatDistanceToNow } from 'date-fns';
+import axios from "axios";
 
-const initialAnnouncements = [
-];
+const API_URL = 'http://localhost:5000/api/announcements';
 
 const Announcement = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     
     const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
-    const [announcements, setAnnouncements] = useState(initialAnnouncements);
+    const [announcements, setAnnouncements] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
-    const [newAnnouncement, setNewAnnouncement] = useState({ content: '', critical: false });
+    const [newAnnouncement, setNewAnnouncement] = useState({ content: '', urgency: false, date: new Date() });
 
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
-    const handleAddAnnouncement = (e) => {
+    const handleAddAnnouncement = async (e) => {
         e.preventDefault();
         if (!newAnnouncement.content) {
             alert('Please fill in at least the content field.');
-        return;
+            return;
         }
-        const announcementToAdd = {
-            id: Date.now(),
-            ...newAnnouncement,
-            timestamp: new Date().toISOString(),
-        };
-        setAnnouncements([announcementToAdd, ...announcements]);
-        // MODIFIED: Added success alert
-        alert('Announcement successfully added!');
-        setNewAnnouncement({ title: '', content: '' });
-        setShowAddForm(false);
+
+        try {
+            await axios.post(API_URL, newAnnouncement, getAuthHeaders());
+            alert('Announcement successfully added!');
+            setShowAddForm(false);
+            setNewAnnouncement({ content: '', urgency: false });
+            fetchAnnouncements(); // Re-fetch to update the list
+        } catch (error) {
+            console.error('Error adding announcement:', error);
+            alert(`Error: ${error.response?.data?.message || 'Could not add announcement.'}`);
+        }
     };
 
     const handleInputChange = (e) => {
@@ -42,13 +43,17 @@ const Announcement = () => {
         setNewAnnouncement(prevState => ({ ...prevState, [name]: type === 'checkbox' ? checked : value }));
     };
     
-    const handleDeleteAnnouncement = (announcementId) => {
+    const handleDeleteAnnouncement = async (announcementId) => {
         if (window.confirm('Are you sure you want to delete this announcement? This action cannot be undone.')) {
-            setAnnouncements(announcements.filter(p => p.id !== announcementId));
-            // MODIFIED: Added success alert
-            alert('Announcement successfully deleted!');
-            setIsEditModalOpen(false);
-            setSelectedAnnouncement(null);
+            try {
+                await axios.delete(`${API_URL}/${announcementId}`, getAuthHeaders());
+                alert('Announcement successfully deleted!');
+                setIsEditModalOpen(false); // Also close the edit modal if deletion happens from there
+                fetchAnnouncements(); // Re-fetch to update the list
+            } catch (error) {
+                console.error('Error deleting announcement:', error);
+                alert(`Error: ${error.response?.data?.message || 'Could not delete announcement.'}`);
+            }
         }
     };
 
@@ -59,8 +64,31 @@ const Announcement = () => {
 
     const formFields = [
         { name: 'content', label: 'Content', type: 'textarea' },
-        { name: 'critical', label: 'Critical', type: 'checkbox' }
+        { name: 'urgency', label: 'Urgent', type: 'checkbox' }
     ];
+
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token'); // Assumes token is stored in localStorage after login
+            return {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+        };
+    };
+
+    const fetchAnnouncements = async () => {
+        try {
+            const response = await axios.get(API_URL, getAuthHeaders());
+            setAnnouncements(response.data);
+            } catch (error) {
+                console.error('Failed to fetch announcements:', error);
+                alert('Failed to fetch announcements. Please make sure you are logged in.');
+        }
+    };
+
+    useEffect(() => {
+        fetchAnnouncements();
+      }, []);
 
     return (
         <>
@@ -105,13 +133,13 @@ const Announcement = () => {
                     )}
 
                     <div className="flex flex-col gap-2 w-full h-full border shadow rounded-lg p-6">
-                        {announcements.map((announcement) => (
-                            <div key={announcement.id} onClick={() => handleViewAnnouncement(announcement)} className="flex items-center border shadow w-full h-16 p-4 text-center justify-between">
+                        {announcements?.map((announcement) => (
+                            <div key={announcement._id} onClick={() => handleViewAnnouncement(announcement)} className="flex items-center border shadow w-full h-16 p-4 text-center justify-between">
                                 {announcement.content}
                                 <div className="flex items-center justify-between gap-3">
-                                    {announcement.critical && (<span className="w-3 h-3 bg-red-500 rounded-full" onClick={(e) => {e.stopPropagation()}}></span>)}
-                                    <span className="text-sm text-gray-500" onClick={(e) => {e.stopPropagation()}}>{announcement.timestamp ? formatDistanceToNow(new Date(announcement.timestamp), { addSuffix: true }) : ''}</span>
-                                <button onClick={(e) => {e.stopPropagation(); handleDeleteAnnouncement(announcement.id)}} className="text-sm text-red-500 hover:text-red-700">Delete</button>
+                                    {announcement.urgency && (<span className="w-3 h-3 bg-red-500 rounded-full" onClick={(e) => {e.stopPropagation()}}></span>)}
+                                    <span className="text-sm text-gray-500" onClick={(e) => {e.stopPropagation()}}>{new Date(announcement.createdAt).toLocaleString('en-US', {dateStyle: 'long', timeStyle: 'short',})}</span>
+                                <button onClick={(e) => {e.stopPropagation(); handleDeleteAnnouncement(announcement._id)}} className="text-sm text-red-500 hover:text-red-700">Delete</button>
                             </div>
                             </div>
                         ))}
@@ -121,12 +149,22 @@ const Announcement = () => {
                         {selectedAnnouncement && (
                             <div className="space-y-3">
                             {Object.entries(selectedAnnouncement).map(([key, value]) => {
-                                if (key === 'id') return null;
-                                const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                if (['_id', '__v', 'updatedAt'].includes(key)) return null;
+
+                                let formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                let formattedValue = value;
+
+                                if (key === 'urgency') {
+                                    formattedKey = 'Urgent';
+                                    formattedValue = value ? 'Yes' : 'No';
+                                } else if (key === 'createdAt') {
+                                    formattedValue = new Date(selectedAnnouncement.createdAt).toLocaleString('en-US', {dateStyle: 'long', timeStyle: 'short',});
+                                }
+                                
                                 return (
                                     <div key={key} className="grid grid-cols-3 gap-4">
                                         <p className="font-semibold text-gray-600 col-span-1">{formattedKey}</p>
-                                        <p className="text-gray-800 col-span-2">{value}</p>
+                                        <p className="text-gray-800 col-span-2">{formattedValue}</p>
                                     </div>
                                 )
                             })}

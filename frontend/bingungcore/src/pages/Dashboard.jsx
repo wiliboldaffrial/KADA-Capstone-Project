@@ -19,7 +19,6 @@ const statusColor = {
   Finished: "text-blue-500",
 };
 
-
 const Dashboard = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -77,15 +76,15 @@ const Dashboard = () => {
               </div>
             </div>
             {/* Graphs */}
-            <div class="">
-              <div class="col-span-1 grid grid-cols-1 gap-4">
-                <div class="bg-blue-600 text-white rounded-md p-4">
-                  <h4 class="font-semibold mb-2">Patient per Day</h4>
-                  <div class="h-40 flex items-center justify-center text-sm">{<PatientChartDay/>}</div>
+            <div className="">
+              <div className="col-span-1 grid grid-cols-1 gap-4">
+                <div className="bg-blue-600 text-white rounded-md p-4">
+                  <h4 className="font-semibold mb-2">Patient per Day</h4>
+                  <div className="h-40 flex items-center justify-center text-sm">{<PatientChartDay/>}</div>
                 </div>
-                <div class="bg-white rounded-md shadow p-4">
-                  <h4 class="font-semibold mb-2">Patient per Month</h4>
-                  <div class="h-40 flex items-center justify-center text-sm">{<PatientBarChart/>}</div>
+                <div className="bg-white rounded-md shadow p-4">
+                  <h4 className="font-semibold mb-2">Patient per Month</h4>
+                  <div className="h-40 flex items-center justify-center text-sm">{<PatientBarChart/>}</div>
                 </div>
               </div>
             </div>
