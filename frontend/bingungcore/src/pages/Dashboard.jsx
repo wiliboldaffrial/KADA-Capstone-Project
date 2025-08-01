@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import React, { useState, useEffect } from "react";
 import SideBar from "../components/SideBar";
 import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
