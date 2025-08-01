@@ -10,6 +10,7 @@ const PatientList = () => {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const toggleSideBar = () => setIsSidebarCollapsed(prev => !prev);
 
@@ -37,7 +38,7 @@ const PatientList = () => {
     fetchAppointments();
   }, []);
 
-    const handleAddCheckup = async (appointmentId, checkupData) => {
+  const handleAddCheckup = async (appointmentId, checkupData) => {
     try {
       const response = await axios.post(
         `${API_URL}/${appointmentId}/checkups`,
@@ -45,7 +46,6 @@ const PatientList = () => {
         getAuthHeaders()
       );
 
-      // Update the local state (replace the appointment with updated one)
       setAppointments(prev =>
         prev.map(app =>
           app._id === appointmentId
@@ -58,56 +58,70 @@ const PatientList = () => {
     }
   };
 
+  const filteredAppointments = appointments.filter(app =>
+    app.patient.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar} />
 
-      <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}>
-        <h1 className="text-2xl font-bold mb-4">Nurse - Patient Checkup List</h1>
+      <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
+        {/* Header with search bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+          <h1 className="text-2xl font-bold">Hello Nurse 👩‍⚕️</h1>
+          <input
+            type="text"
+            placeholder="Search patient..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-4 sm:mt-0 border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4 overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="bg-blue-100">
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Time</th>
-                <th className="px-4 py-2 text-left">Patient</th>
-                <th className="px-4 py-2 text-left">Doctor</th>
-                <th className="px-4 py-2 text-left">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((app) => (
-                <React.Fragment key={app._id}>
-                  <tr
-                    className={`border-t cursor-pointer hover:bg-blue-50 ${selectedAppointment && selectedAppointment._id === app._id ? "bg-blue-50" : ""}`}
-                    onClick={() => setSelectedAppointment(app._id === selectedAppointment?._id ? null : app)}
-                  >
-                    <td className="px-4 py-2">{app.date}</td>
-                    <td className="px-4 py-2">{app.time}</td>
-                    <td className="px-4 py-2">{app.patient}</td>
-                    <td className="px-4 py-2">{app.doctor}</td>
-                    <td className="px-4 py-2">{app.notes || '-'}</td>
-                  </tr>
-                  {selectedAppointment && selectedAppointment._id === app._id && (
-                  <tr>
-                    <td colSpan="5">
-                      <ExpandedPatientDetails
-                        patient={appointments.find(p => p._id === selectedAppointment._id)} // <- use fresh state
-                        onAddCheckup={handleAddCheckup}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {appointments.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="text-center text-gray-500 py-4">No appointments found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        {/* Appointment List */}
+        <div className="space-y-4">
+          {filteredAppointments.map((app) => {
+            const isSelected = selectedAppointment?._id === app._id;
+            return (
+              <div key={app._id} className="bg-white rounded-xl shadow p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-lg">{app.patient}</p>
+
+                    {/* Appointment Details */}
+                    <div className="mt-1 text-sm text-gray-600">
+                      <p><strong>Doctor:</strong> {app.doctor}</p>
+                      <p><strong>Schedule:</strong> {format(new Date(app.dateTime), 'dd MMM yyyy, HH:mm')}</p>
+                      {app.notes && <p><strong>Notes:</strong> {app.notes}</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setSelectedAppointment(isSelected ? null : app)}
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      {isSelected ? '▲ Hide' : '▼ View'}
+                    </button>
+                  </div>
+                </div>
+
+                {isSelected && (
+                  <div className="mt-4 border-t pt-4">
+                    <ExpandedPatientDetails
+                      patient={appointments.find(p => p._id === selectedAppointment._id)}
+                      onAddCheckup={handleAddCheckup}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {filteredAppointments.length === 0 && (
+            <div className="text-center text-gray-500 mt-20">No appointments found.</div>
+          )}
         </div>
       </div>
     </div>
@@ -115,4 +129,3 @@ const PatientList = () => {
 };
 
 export default PatientList;
-
