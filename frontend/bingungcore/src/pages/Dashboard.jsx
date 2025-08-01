@@ -7,17 +7,10 @@ import { format, isToday } from "date-fns";
 import { toast } from "react-hot-toast";
 
 // Define API URLs
-const PATIENTS_API_URL = "http://localhost:5000/api/patients";
-const APPOINTMENTS_API_URL = "http://localhost:5000/api/appointments";
-const ANNOUNCEMENTS_API_URL = "http://localhost:5000/api/announcements";
-const ROOMS_API_URL = "http://localhost:5000/api/rooms";
-
-const statusColor = {
-  Waiting: "text-yellow-500",
-  Scheduled: "text-green-500",
-  Finished: "text-blue-500",
-  Cancelled: "text-red-500", // Added for completeness
-};
+const PATIENTS_API_URL = 'http://localhost:5000/api/patients';
+const APPOINTMENTS_API_URL = 'http://localhost:5000/api/appointments';
+const ANNOUNCEMENTS_API_URL = 'http://localhost:5000/api/announcements';
+const ROOMS_API_URL = 'http://localhost:5000/api/rooms';
 
 const Dashboard = () => {
   console.log("Dashboard component is rendering.");
@@ -31,6 +24,20 @@ const Dashboard = () => {
   const [latestAnnouncement, setLatestAnnouncement] = useState(null);
 
   const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  
+  const sortedAppointments = [...todaysAppointments].sort((a, b) => {
+      const now = new Date();
+      const aIsPast = new Date(a.dateTime) < now;
+      const bIsPast = new Date(b.dateTime) < now;
+
+      // Past appointments go last
+      if (aIsPast && !bIsPast) return 1;
+      if (!aIsPast && bIsPast) return -1;
+
+      // If both are in the same category, sort by time
+      return new Date(a.dateTime) - new Date(b.dateTime);
+  });
+
 
   // NEW: Fetch all necessary dashboard data on component mount
   useEffect(() => {
@@ -106,7 +113,7 @@ const Dashboard = () => {
                   <p className="text-gray-600">Doctors</p>
                 </div>
                 <div className="bg-white shadow rounded-md p-4 text-center">
-                  <h2 className="text-3xl font-bold">{availableRooms}</h2>
+                  <h2 className="text-2xl font-bold">{availableRooms}</h2>
                   <p className="text-gray-600">Rooms Available</p>
                 </div>
               </div>
@@ -115,17 +122,15 @@ const Dashboard = () => {
               <div className="col-span-1 bg-white shadow rounded-md p-4">
                 <h3 className="font-semibold text-lg mb-4">Today's Appointments</h3>
                 <ul className="divide-y">
-                  {todaysAppointments.length > 0 ? (
-                    todaysAppointments.map((appt) => (
+                  {sortedAppointments.length > 0 ? (
+                    sortedAppointments.map((appt) => (
                       <li key={appt._id} className="py-2 flex justify-between items-center">
                         <div>
                           <p>{appt.patient}</p>
-                          <p className="text-xs text-gray-500">
-                            {format(new Date(appt.dateTime), "p")} with {appt.doctor}
-                          </p>
+                          <p className="text-xs text-gray-500">{appt.doctor}</p>
                         </div>
                         {/* Note: 'status' field needs to be added to your Appointment model for this to work */}
-                        <span className={statusColor[appt.status] || "text-gray-500"}>{appt.status || "Scheduled"}</span>
+                        <span className='text-sm text-blue-600'>{new Date() > new Date(appt.dateTime) ? "Finished" : format(new Date(appt.dateTime), "h:mm a")}</span>
                       </li>
                     ))
                   ) : (
