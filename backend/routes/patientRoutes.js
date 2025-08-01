@@ -13,6 +13,24 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Add new checkup (used by nurse)
+router.post('/:id/checkup', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const newCheckup = req.body;
+
+    const patient = await Patient.findById(id);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+    patient.checkups.push(newCheckup);
+    await patient.save();
+
+    res.status(200).json(patient);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get a single patient by id
 router.get('/:id', async (req, res) => {
     try {

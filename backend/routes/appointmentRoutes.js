@@ -13,14 +13,30 @@ router.get('/', async (req, res) => {
 });
 
 // POST a new appointment
-router.post('/', async (req, res) => {
-    try {
-        const appointment = new Appointment(req.body);
-        const newAppointment = await appointment.save();
-        res.status(201).json(newAppointment);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
+// backend/routes/appointments.js
+router.post('/:id/checkups', async (req, res) => {
+  const { id } = req.params;
+  const checkupData = req.body;
+
+  try {
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
     }
+
+    if (!appointment.checkups) {
+      appointment.checkups = [];
+    }
+
+    appointment.checkups.push(checkupData);
+    await appointment.save();
+
+    // Return the last added checkup
+    res.status(201).json(appointment.checkups[appointment.checkups.length - 1]);
+  } catch (error) {
+    console.error("Failed to add checkup:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // PUT to update an appointment

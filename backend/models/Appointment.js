@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { initialCheckupSchema } = require('./Patient');
 
 const appointmentSchema = new mongoose.Schema({
     patient: {
@@ -16,7 +17,11 @@ const appointmentSchema = new mongoose.Schema({
     notes: {
         type: String,
         default: ''
-    }
+    },
+    checkups: {
+        type: [initialCheckupSchema],
+        default: [],
+    },
 }, {
     timestamps: true // Automatically adds createdAt and updatedAt
 });
