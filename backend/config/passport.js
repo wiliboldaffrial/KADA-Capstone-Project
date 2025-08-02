@@ -10,11 +10,12 @@ const JWT_SECRET = 'your-jwt-secret'; // Move this to .env in production
 // Local Strategy for username/password authentication
 passport.use(new LocalStrategy({
     usernameField: 'email',
-    passwordField: 'password'
-}, async (email, password, done) => {
+    passwordField: 'password',
+    passReqToCallback: true // Enables access to the full `req` object inside the callback by Qem
+}, async (req, email, password, done) => {
     try {
         const user = await User.findOne({ email });
-        
+
         if (!user) {
             return done(null, false, { message: 'Invalid credentials' });
         }
@@ -22,6 +23,12 @@ passport.use(new LocalStrategy({
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return done(null, false, { message: 'Invalid credentials' });
+        }
+
+        // Check if the selected role matches the user's role by Qem
+        const selectedRole = req.body.selectedRole;
+        if (selectedRole && selectedRole.toLowerCase() !== user.role.toLowerCase()) {
+            return done(null, false, { message: 'Role mismatch. Please choose the correct role.' });
         }
 
         return done(null, user);

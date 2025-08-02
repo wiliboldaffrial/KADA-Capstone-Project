@@ -81,7 +81,7 @@ const SharedPatientListLayout = ({ title, patients: patientData }) => {
 };
 
 
-const PatientList = () => {
+const PatientListDoctor = () => { // Changed the naming by Qem 
     const role = localStorage.getItem('role');
 
     if (role === 'nurse') {
@@ -96,4 +96,4 @@ const PatientList = () => {
     return <div className="p-8"><h2 className="text-red-500">Access Denied. Please select a role.</h2></div>;
 };
 
-export default PatientList;
+export default PatientListDoctor; // Changed the naming by Qem 

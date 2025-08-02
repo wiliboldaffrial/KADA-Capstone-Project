@@ -39,6 +39,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
   };
 
   // We use the userRole from context now, not localStorage
+  const normalizedRole = userRole?.toLowerCase() === 'admin' ? 'admin/receptionist' : userRole?.toLowerCase(); // Normalize the role to match the keys in roleBasedLinks by Qem
   const linksToShow = [...commonLinks, ...(roleBasedLinks[userRole] || [])];
 
   // We can add a simple loading check here if needed

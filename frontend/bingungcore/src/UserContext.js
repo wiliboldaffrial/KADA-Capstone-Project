@@ -5,10 +5,10 @@ import axios from "axios";
 // Create a new context
 const UserContext = createContext();
 
-// Create a custom hook to use the context
+// Custom hook
 export const useUser = () => useContext(UserContext);
 
-// Create the provider component
+// Provider
 export const UserProvider = ({ children }) => {
   const [userName, setUserName] = useState(null);
   const [userRole, setUserRole] = useState(null);
@@ -23,29 +23,36 @@ export const UserProvider = ({ children }) => {
     };
   };
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const token = localStorage.getItem("token");
-      const role = localStorage.getItem("role")?.toLowerCase();
+  // Fetch user data from the backend
+  const fetchUserData = async () => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role")?.toLowerCase();
 
-      if (token && role) {
-        try {
-          const decoded = jwtDecode(token);
-          const userId = decoded.id;
+    if (token && role) {
+      try {
+        const decoded = jwtDecode(token);
+        const userId = decoded.id;
 
-          const res = await axios.get(`http://localhost:5000/api/users/${userId}`, getAuthHeaders());
+        const res = await axios.get(`http://localhost:5000/api/users/${userId}`, getAuthHeaders());
 
-          if (res.data && res.data.name) {
-            setUserName(res.data.name);
-            setUserRole(role);
-          }
-        } catch (error) {
-          console.error("Failed to fetch user data:", error);
+        if (res.data && res.data.name) {
+          setUserName(res.data.name);
+          setUserRole(role === 'admin' ? 'admin/receptionist' : role);
         }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        setUserName(null);
+        setUserRole(null);
       }
-      setLoading(false); // Data fetching is complete (or failed)
-    };
+    } else {
+      setUserName(null);
+      setUserRole(null);
+    }
 
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchUserData();
   }, []);
 
@@ -53,6 +60,7 @@ export const UserProvider = ({ children }) => {
     userName,
     userRole,
     loading,
+    refetchUserData: fetchUserData, // Expose a method to refetch user data
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

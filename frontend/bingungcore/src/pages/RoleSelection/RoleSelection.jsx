@@ -1,10 +1,16 @@
 import React from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginAppHeader from "../../components/LoginAppHeader";
 
 // Component for the first step: Role Selection
 const RoleSelection = () => {
   const navigate = useNavigate();
+
+  // Clear the role from localStorage when this component mounts by Qem
+  useEffect(() => {
+    localStorage.removeItem("role");
+  }, []);
 
   const roles = ["Admin/Receptionist", "Nurse", "Doctor"];
 

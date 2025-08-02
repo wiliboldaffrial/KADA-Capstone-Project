@@ -12,7 +12,25 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST a new appointment
+// POST /api/appointments — Create a new appointment 
+router.post('/', async (req, res) => {
+  try {
+    const { patient, doctor, dateTime, notes } = req.body;
+
+    if (!patient || !doctor || !dateTime) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const newAppointment = new Appointment({ patient, doctor, dateTime, notes });
+    await newAppointment.save();
+    res.status(201).json(newAppointment);
+  } catch (error) {
+    console.error("Failed to create appointment:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// POST a new appointment checkup (used by nurse) by Qem
 // backend/routes/appointments.js
 router.post('/:id/checkups', async (req, res) => {
   const { id } = req.params;
