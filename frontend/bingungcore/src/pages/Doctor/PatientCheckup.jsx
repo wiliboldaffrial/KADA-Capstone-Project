@@ -250,7 +250,7 @@ const PatientCheckup = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-gray-800">Patient Checkup</h1>
-            <button onClick={() => navigate("/doctor/patient")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            <button onClick={() => navigate("/doctor/patients")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
               <Home size={20} />
               All Patients
             </button>

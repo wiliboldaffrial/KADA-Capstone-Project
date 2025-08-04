@@ -468,13 +468,15 @@ const PatientPage = () => {
                 Full Diagnosis
               </button>
               <button
-                onClick={() => {
-                  console.log("Schedule appointment for", patient.name);
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPatientToDelete(patient);
+                  setShowDeleteModal(true);
                 }}
-                className="px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
               >
-                <Calendar className="w-4 h-4" />
-                Schedule
+                <Trash2 className="w-4 h-4" />
+                Delete
               </button>
             </div>
           </>
@@ -716,62 +718,7 @@ const PatientPage = () => {
               {/* Mobile Card View - bg-white and shadow classes removed */}
               <div className="lg:hidden">
                 {currentPatients.map((patient) => (
-                  <div key={patient._id} className="border border-gray-200 p-4 mb-4">
-                    <div className="cursor-pointer" onClick={() => handlePatientExpansion(patient)}>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{patient.name}</h3>
-                          <p className="text-sm text-gray-500">ID: {patient._id}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {expandedPatient && expandedPatient._id === patient._id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          <button className="p-1 hover:bg-gray-100 rounded" onClick={(e) => e.stopPropagation()}>
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-600 mb-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>Age: {calculateAge(patient.dateOfBirth)} years</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          <span>{patient.gender}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          <span>{patient.phone || "No phone"}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate">{patient.address || "No address"}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {expandedPatient && expandedPatient._id === patient._id && (
-                      <>
-                        <ExpandedPatientDetails patient={patient} />
-                        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-3">
-                          <button onClick={() => navigate(`/doctor/patient/${patient._id}`)} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
-                            <Eye className="w-4 h-4" />
-                            Full Diagnosis
-                          </button>
-                          <button
-                            onClick={() => {
-                              console.log("Schedule appointment for", patient.name);
-                            }}
-                            className="px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
-                          >
-                            <Calendar className="w-4 h-4" />
-                            Schedule
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <PatientCard key={patient._id} patient={patient} />
                 ))}
               </div>
 
