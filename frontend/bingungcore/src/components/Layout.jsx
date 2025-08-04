@@ -3,11 +3,11 @@ import { Outlet } from "react-router-dom";
 import SideBar from "./SideBar";
 import { useSideBar } from "../SideBarContext";
 
-const Layout = () => {
+const Layout = ({ children, bgClass = "bg-gray-100" }) => {
   const { isCollapsed, toggleSideBar } = useSideBar();
 
   return (
-    <div className="flex min-h-screen">
+    <div className={`flex min-h-screen ${bgClass}`}>
       {/* The SideBar is now rendered here ONCE */}
       <SideBar />
       <div className={`flex-1 transition-all duration-300 p-6 ${isCollapsed ? "ml-16" : "ml-64"}`}>

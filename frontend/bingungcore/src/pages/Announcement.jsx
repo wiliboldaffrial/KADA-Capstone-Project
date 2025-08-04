@@ -101,10 +101,6 @@ const Announcement = () => {
 
   return (
     <>
-      {/*
-        The main layout with SideBar and the padding/margin divs have been moved to Layout.jsx.
-        This component now only contains the content to be displayed within the Outlet.
-      */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Announcements</h1>
         <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition">
@@ -146,12 +142,16 @@ const Announcement = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 w-full h-full border shadow rounded-lg p-6">
+      <div className="flex flex-col gap-2 w-full h-full">
         {announcements?.length > 0 ? (
           announcements.map((announcement) => (
-            <div key={announcement._id} onClick={() => handleViewAnnouncement(announcement)} className="flex items-center border shadow w-full h-16 p-4 text-center justify-between">
-              {announcement.content}
-              <div className="flex items-center justify-between gap-3">
+            <div
+              key={announcement._id}
+              onClick={() => handleViewAnnouncement(announcement)}
+              className="flex items-center bg-white border rounded-lg shadow-sm w-full h-16 p-4 justify-between transition-colors hover:bg-gray-50 cursor-pointer"
+            >
+              <p className="text-gray-800 truncate">{announcement.content}</p>
+              <div className="flex items-center flex-shrink-0 ml-4 gap-3">
                 {announcement.urgency && (
                   <span
                     className="w-3 h-3 bg-red-500 rounded-full"
