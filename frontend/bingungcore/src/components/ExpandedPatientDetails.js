@@ -23,7 +23,7 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
     const checkupData = {
       date: newCheckup.date,
       weight: parseFloat(newCheckup.weight),
-      height: parseFloat(newCheckup.height),
+      // height: parseFloat(newCheckup.height),
       bloodPressure: newCheckup.bloodPressure,
       temperature: parseFloat(newCheckup.temperature),
       notes: newCheckup.notes,
@@ -35,7 +35,7 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
       setNewCheckup({
         date: '',
         weight: '',
-        height: '',
+        // height: '',
         bloodPressure: '',
         temperature: '',
         notes: ''
@@ -49,6 +49,14 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
 
   return (
     <div className="mt-4 p-6 bg-gray-100 rounded-2xl shadow-inner grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Patient Info Details */}
+        <div className="bg-white rounded-xl shadow p-4 lg:col-span-2">
+          <h3 className="text-lg font-semibold mb-2">Appointment Details</h3>
+          <p className="text-sm text-gray-700"><strong>Doctor:</strong> {patient.doctor}</p>
+          {patient.notes && (
+            <p className="text-sm text-gray-700"><strong>Notes:</strong> {patient.notes}</p>
+          )}
+        </div>
       {/* Left: Checkup History */}
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Checkup History</h3>
@@ -80,7 +88,7 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
                 {selectedCheckup === idx && (
                 <div className="mt-3 text-sm text-gray-700 space-y-1 px-2">
                     <p>Weight: {checkup.weight} kg</p>
-                    <p>Height: {checkup.height} cm</p>
+                    {/* <p>Height: {checkup.height} cm</p> */}
                     <p>Blood Pressure: {checkup.bloodPressure}</p>
                     <p>Temperature: {checkup.temperature} °C</p>
                     <p>Notes: {checkup.notes || '-'}</p>
@@ -113,14 +121,14 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
             onChange={handleInputChange}
             className="w-full border px-3 py-2 rounded"
           />
-          <input
+          {/* <input
             type="number"
             name="height"
             placeholder="Height (cm)"
             value={newCheckup.height}
             onChange={handleInputChange}
             className="w-full border px-3 py-2 rounded"
-          />
+          /> */}
           <input
             type="text"
             name="bloodPressure"

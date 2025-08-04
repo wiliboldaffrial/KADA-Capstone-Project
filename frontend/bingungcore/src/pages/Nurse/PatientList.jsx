@@ -85,28 +85,30 @@ const PatientList = () => {
             const isSelected = selectedAppointment?._id === app._id;
             return (
               <div key={app._id} className="bg-white rounded-xl shadow p-4 mb-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-lg">{app.patient}</p>
-
-                    {/* Appointment Details */}
-                    <div className="mt-1 text-sm text-gray-600">
-                      <p><strong>Doctor:</strong> {app.doctor}</p>
-                      <p><strong>Schedule:</strong> {format(new Date(app.dateTime), 'dd MMM yyyy, HH:mm')}</p>
-                      {app.notes && <p><strong>Notes:</strong> {app.notes}</p>}
-                    </div>
+                    {/* Schedule always visible */}
+                    <p className="mt-1 text-sm text-gray-600">
+                      <strong>Schedule:</strong> {format(new Date(app.dateTime), 'dd MMM yyyy, HH:mm')}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setSelectedAppointment(isSelected ? null : app)}
-                      className="text-blue-600 hover:underline text-sm"
-                    >
-                      {isSelected ? '▲ Hide' : '▼ View'}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setSelectedAppointment(isSelected ? null : app)}
+                    className="mt-2 sm:mt-0 flex items-center text-blue-600 hover:underline text-sm"
+                  >
+                    {isSelected ? (
+                      <>
+                        ▲ <span className="ml-1">Hide</span>
+                      </>
+                    ) : (
+                      <>
+                        ▼ <span className="ml-1">View</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-
                 {isSelected && (
                   <div className="mt-4 border-t pt-4">
                     <ExpandedPatientDetails

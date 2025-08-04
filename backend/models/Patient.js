@@ -4,7 +4,7 @@ const Checkup = require('./Checkup');
 const initialCheckupSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   weight: Number,
-  height: Number,
+  // height: Number,
   bloodPressure: String,
   temperature: Number,
   notes: String,
