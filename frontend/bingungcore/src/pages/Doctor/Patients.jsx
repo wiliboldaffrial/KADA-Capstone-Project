@@ -14,12 +14,17 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Users
+  Users,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Activity
 } from 'lucide-react';
 import SideBar from '../../components/SideBar';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
 
 const PatientPage = () => {
   const navigate = useNavigate();
@@ -48,10 +53,22 @@ const PatientPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
 
+  // NEW: Patient expansion states
+  const [expandedPatient, setExpandedPatient] = useState(null);
+  const [patientCheckups, setPatientCheckups] = useState({});
+  const [patientAppointments, setPatientAppointments] = useState({});
+
   // Helper function for auth headers
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    console.log('Token:', token); //Debut Line
+    console.log('Token exists:', !!token);
+    console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'No token');
+    
+    if (!token) {
+      console.warn('No authentication token found');
+      return {};
+    }
+    
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -61,22 +78,111 @@ const PatientPage = () => {
   // Fetch all patients
   const fetchPatients = async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/patients`, getAuthHeaders());
+      setLoading(true);
+      console.log('Fetching patients from:', `${process.env.REACT_APP_API_URL}/api/patients`);
+      console.log('Auth headers:', getAuthHeaders());
+      
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/patients`, { headers: getAuthHeaders() });
+      console.log('Patients response:', response.data);
+      
       const patientsWithAge = response.data.map(p => ({
         ...p,
         age: p.birthdate ? new Date().getFullYear() - new Date(p.birthdate).getFullYear() : 'N/A',
       }));
       setPatients(patientsWithAge);
+      setError(null);
     } catch (error) {
       console.error('Failed to fetch patients:', error);
-      // MODIFIED: Use toast for errors
-      toast.error('Failed to fetch patients. Please log in.');
+      console.error('Error response:', error.response);
+      
+      if (error.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        // Optionally redirect to login
+        // navigate('/login');
+      } else if (error.response?.status === 403) {
+        setError('Access denied. You do not have permission to view patients.');
+      } else if (error.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+        setError('Network error. Please check your connection.');
+      } else {
+        setError(error.response?.data?.message || 'Failed to fetch patients.');
+      }
+      
+      toast.error(error.response?.data?.message || 'Failed to fetch patients.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Fetch patient checkups
+  const fetchPatientCheckups = async (patientId) => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/api/checkups/patient/${patientId}`,
+        { headers: getAuthHeaders() }
+      );
+      setPatientCheckups(prev => ({
+        ...prev,
+        [patientId]: response.data
+      }));
+    } catch (error) {
+      console.error('Failed to fetch checkups:', error);
+      setPatientCheckups(prev => ({
+        ...prev,
+        [patientId]: []
+      }));
+    }
+  };
+
+  // NEW: Fetch patient appointments
+  const fetchPatientAppointments = async (patientId) => {
+    try {
+      // Assuming you have an appointments endpoint that can filter by patient
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/api/appointments/patient/${patientId}`,
+        { headers: getAuthHeaders() }
+      );
+      setPatientAppointments(prev => ({
+        ...prev,
+        [patientId]: response.data
+      }));
+    } catch (error) {
+      console.error('Failed to fetch appointments:', error);
+      setPatientAppointments(prev => ({
+        ...prev,
+        [patientId]: []
+      }));
+    }
+  };
+
+  // NEW: Handle patient expansion
+  const handlePatientExpansion = async (patient) => {
+    if (expandedPatient && expandedPatient._id === patient._id) {
+      // Collapse if already expanded
+      setExpandedPatient(null);
+    } else {
+      // Expand and fetch related data
+      setExpandedPatient(patient);
+      
+      // Fetch checkups and appointments if not already loaded
+      if (!patientCheckups[patient._id]) {
+        await fetchPatientCheckups(patient._id);
+      }
+      if (!patientAppointments[patient._id]) {
+        await fetchPatientAppointments(patient._id);
+      }
     }
   };
 
   // Load patients on component mount
   useEffect(() => {
-    fetchPatients();
+    const loadPatients = async () => {
+      console.log('Component mounted, loading patients...');
+      await fetchPatients();
+    };
+    
+    loadPatients();
   }, []);
 
   // Search and filter effect
@@ -203,70 +309,254 @@ const PatientPage = () => {
     }
   };
 
-  // Patient card component for mobile view
-  const PatientCard = ({ patient }) => (
-    <div 
-      className="bg-white rounded-lg shadow-sm border p-4 mb-4 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => navigate(`/doctor/patient/${patient._id}`)}
-    >
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="font-semibold text-gray-900">{patient.name}</h3>
-          <p className="text-sm text-gray-500">ID: {patient._id}</p>
+  // NEW: Expanded Patient Details Component
+  const ExpandedPatientDetails = ({ patient }) => {
+    const checkups = patientCheckups[patient._id] || [];
+    const appointments = patientAppointments[patient._id] || [];
+
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Patient Full Details */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Patient Details
+            </h4>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Full Name:</span>
+                  <p className="text-gray-900">{patient.name}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Patient ID:</span>
+                  <p className="text-gray-900 font-mono">{patient._id}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Age:</span>
+                  <p className="text-gray-900">{calculateAge(patient.dateOfBirth)} years</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Gender:</span>
+                  <p className="text-gray-900">{patient.gender}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Phone:</span>
+                  <p className="text-gray-900">{patient.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Date of Birth:</span>
+                  <p className="text-gray-900">{formatDate(patient.dateOfBirth)}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="font-medium text-gray-600">Address:</span>
+                  <p className="text-gray-900">{patient.address || 'Not provided'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Recent Activity
+            </h4>
+            
+            {/* Recent Checkups */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Recent Checkups ({checkups.length})
+              </h5>
+              {checkups.length > 0 ? (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {checkups.slice(0, 3).map((checkup) => (
+                    <div key={checkup._id} className="bg-white p-2 rounded border text-sm">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {checkup.type || 'General Checkup'}
+                          </p>
+                          <p className="text-gray-600 text-xs">
+                            {format(new Date(checkup.date), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          checkup.status === 'completed' 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {checkup.status || 'pending'}
+                        </span>
+                      </div>
+                      {checkup.doctorNotes && (
+                        <p className="text-gray-600 text-xs mt-1 truncate">
+                          Notes: {checkup.doctorNotes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  {checkups.length > 3 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      +{checkups.length - 3} more checkups
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No checkups recorded</p>
+              )}
+            </div>
+
+            {/* Upcoming Appointments */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Appointments ({appointments.length})
+              </h5>
+              {appointments.length > 0 ? (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {appointments.slice(0, 3).map((appointment) => (
+                    <div key={appointment._id} className="bg-white p-2 rounded border text-sm">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            Dr. {appointment.doctor}
+                          </p>
+                          <p className="text-gray-600 text-xs">
+                            {format(new Date(appointment.dateTime), 'MMM dd, yyyy HH:mm')}
+                          </p>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          appointment.status === 'completed' 
+                            ? 'bg-green-100 text-green-800'
+                            : appointment.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {appointment.status || 'scheduled'}
+                        </span>
+                      </div>
+                      {appointment.notes && (
+                        <p className="text-gray-600 text-xs mt-1 truncate">
+                          {appointment.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                  {appointments.length > 3 && (
+                    <p className="text-xs text-gray-500 text-center">
+                      +{appointments.length - 3} more appointments
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No appointments scheduled</p>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="relative">
-          <button 
-            className="p-1 hover:bg-gray-100 rounded"
-            onClick={(e) => e.stopPropagation()}
+
+        {/* Action Buttons */}
+        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={() => navigate(`/doctor/patient/${patient._id}`)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
           >
-            <MoreVertical className="w-4 h-4" />
+            <Eye className="w-4 h-4" />
+            Full Diagnosis
+          </button>
+          <button
+            onClick={() => {
+              // Add logic for scheduling appointment
+              console.log('Schedule appointment for', patient.name);
+            }}
+            className="px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            Schedule
           </button>
         </div>
       </div>
-      
-      <div className="space-y-2 text-sm text-gray-600 mb-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          <span>Age: {calculateAge(patient.dateOfBirth)} years</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4" />
-          <span>{patient.gender}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Phone className="w-4 h-4" />
-          <span>{patient.phone || 'No phone'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          <span className="truncate">{patient.address || 'No address'}</span>
-        </div>
-      </div>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/doctor/patient/${patient._id}`);
-          }}
-          className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+    );
+  };
+
+  // Enhanced Patient card component for mobile view
+  const PatientCard = ({ patient }) => {
+    const isExpanded = expandedPatient && expandedPatient._id === patient._id;
+    
+    return (
+      <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
+        <div 
+          className="cursor-pointer"
+          onClick={() => handlePatientExpansion(patient)}
         >
-          <Eye className="w-4 h-4" />
-          Diagnose
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setPatientToDelete(patient);
-            setShowDeleteModal(true);
-          }}
-          className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="font-semibold text-gray-900">{patient.name}</h3>
+              <p className="text-sm text-gray-500">ID: {patient._id}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <button 
+                className="p-1 hover:bg-gray-100 rounded"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="space-y-2 text-sm text-gray-600 mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>Age: {calculateAge(patient.dateOfBirth)} years</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              <span>{patient.gender}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              <span>{patient.phone || 'No phone'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              <span className="truncate">{patient.address || 'No address'}</span>
+            </div>
+          </div>
+        </div>
+        
+        {!isExpanded && (
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/doctor/patient/${patient._id}`);
+              }}
+              className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Diagnose
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPatientToDelete(patient);
+                setShowDeleteModal(true);
+              }}
+              className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {isExpanded && <ExpandedPatientDetails patient={patient} />}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -391,8 +681,26 @@ const PatientPage = () => {
           {/* Loading State */}
           {loading ? (
             <div className="bg-white rounded-lg shadow-sm p-8">
-              <div className="flex justify-center items-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <div className="flex flex-col justify-center items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-gray-600">Loading patients...</p>
+                <p className="text-sm text-gray-400 mt-2">If this takes too long, check your network connection</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-white rounded-lg shadow-sm p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Patients</h3>
+                <p className="text-gray-600 mb-4">{error}</p>
+                <button
+                  onClick={fetchPatients}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Try Again
+                </button>
               </div>
             </div>
           ) : (
@@ -438,76 +746,88 @@ const PatientPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {currentPatients.map((patient) => (
-                      <tr 
-                        key={patient._id} 
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => navigate(`/doctor/patient/${patient._id}`)}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {patient.name}
+                    {currentPatients.map((patient) => {
+                      const isExpanded = expandedPatient && expandedPatient._id === patient._id;
+                      return (
+                        <React.Fragment key={patient._id}>
+                          <tr 
+                            className="hover:bg-gray-50 cursor-pointer"
+                            onClick={() => handlePatientExpansion(patient)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                    {patient.name}
+                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    ID: {patient._id}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                ID: {patient._id}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {calculateAge(patient.dateOfBirth)} years
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                patient.gender?.toLowerCase() === 'male' 
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : patient.gender?.toLowerCase() === 'female'
+                                  ? 'bg-pink-100 text-pink-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {patient.gender || 'Not specified'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div>
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  {patient.phone || 'No phone'}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <MapPin className="w-4 h-4 text-gray-400" />
+                                  <span className="truncate max-w-xs">{patient.address || 'No address'}</span>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {calculateAge(patient.dateOfBirth)} years
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            patient.gender?.toLowerCase() === 'male' 
-                              ? 'bg-blue-100 text-blue-800'
-                              : patient.gender?.toLowerCase() === 'female'
-                              ? 'bg-pink-100 text-pink-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {patient.gender || 'Not specified'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-4 h-4 text-gray-400" />
-                              {patient.phone || 'No phone'}
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <MapPin className="w-4 h-4 text-gray-400" />
-                              <span className="truncate max-w-xs">{patient.address || 'No address'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/doctor/patient/${patient._id}`);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 p-1 rounded flex items-center gap-1 px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Diagnose
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPatientToDelete(patient);
-                                setShowDeleteModal(true);
-                              }}
-                              className="text-red-600 hover:text-red-900 p-1 rounded"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/doctor/patient/${patient._id}`);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900 p-1 rounded flex items-center gap-1 px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  Diagnose
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPatientToDelete(patient);
+                                    setShowDeleteModal(true);
+                                  }}
+                                  className="text-red-600 hover:text-red-900 p-1 rounded"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan="5" className="px-6 py-0">
+                                <ExpandedPatientDetails patient={patient} />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
 
