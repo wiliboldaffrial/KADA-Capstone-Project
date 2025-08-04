@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
+<<<<<<< Updated upstream
+const {Patient} = require('../models/Patient');
+const {Checkup} = require('../models/Checkup');
+=======
 const Patient = require('../models/Patient');
 const Checkup = require('../models/Checkup');
+>>>>>>> Stashed changes
 
 // Get all patients
 router.get('/', async (req, res) => {
