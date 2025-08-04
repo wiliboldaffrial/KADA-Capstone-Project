@@ -1,226 +1,143 @@
 import React, { useState, useEffect } from "react";
-import SideBar from "../components/SideBar";
-import Modal from "../components/Modal";
-import { formatDistanceToNow } from "date-fns";
+// Removed: import SideBar from "../components/SideBar";
+import PatientChartDay from "../components/PatientChartDay";
+import PatientBarChart from "../components/PatientBarMonth";
 import axios from "axios";
+import { format, isToday } from "date-fns";
 import { toast } from "react-hot-toast";
-import ConfirmationModal from "../components/ConfirmationModal";
 
-const API_URL = "http://localhost:5000/api/announcements";
+// Define API URLs
+const PATIENTS_API_URL = "http://localhost:5000/api/patients";
+const APPOINTMENTS_API_URL = "http://localhost:5000/api/appointments";
+const ANNOUNCEMENTS_API_URL = "http://localhost:5000/api/announcements";
+const ROOMS_API_URL = "http://localhost:5000/api/rooms";
 
-const Announcement = () => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+const Dashboard = () => {
+  console.log("Dashboard component is rendering.");
 
-  const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
+  // Removed: isSidebarCollapsed and toggleSideBar
+  // const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
-  const [announcements, setAnnouncements] = useState([]);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newAnnouncement, setNewAnnouncement] = useState({ content: "", urgency: false, date: new Date() });
+  // NEW: State for dynamic dashboard data
+  const [patientCount, setPatientCount] = useState(0);
+  const [availableRooms, setAvailableRooms] = useState(0);
+  const [todaysAppointments, setTodaysAppointments] = useState([]);
+  const [latestAnnouncement, setLatestAnnouncement] = useState(null);
 
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const sortedAppointments = [...todaysAppointments].sort((a, b) => {
+    const now = new Date();
+    const aIsPast = new Date(a.dateTime) < now;
+    const bIsPast = new Date(b.dateTime) < now;
 
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
-
-  const handleAddAnnouncement = async (e) => {
-    e.preventDefault();
-    if (!newAnnouncement.content) {
-      alert("Please fill in at least the content field.");
-      return;
-    }
-
-    try {
-      await axios.post(API_URL, newAnnouncement, getAuthHeaders());
-      toast.success("Announcement successfully added!");
-      setShowAddForm(false);
-      setNewAnnouncement({ content: "", urgency: false });
-      fetchAnnouncements(); // Re-fetch to update the list
-    } catch (error) {
-      console.error("Error adding announcement:", error);
-      toast.error(error.response?.data?.message || "Could not add announcement.");
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, type, value, checked } = e.target;
-    setNewAnnouncement((prevState) => ({ ...prevState, [name]: type === "checkbox" ? checked : value }));
-  };
-
-  const handleConfirmDelete = async () => {
-    if (announcementToDelete) {
-      try {
-        await axios.delete(`${API_URL}/${announcementToDelete}`, getAuthHeaders());
-        toast.success("Announcement successfully deleted!");
-        setSelectedAnnouncement(null);
-        setIsEditing(false);
-        fetchAnnouncements(); // Refresh list
-      } catch (error) {
-        console.error("Error deleting announcement:", error);
-        toast.error(error.response?.data?.message || "Could not delete announcement.");
-      } finally {
-        setDeleteModalOpen(false);
-        setAnnouncementToDelete(null);
-      }
-    }
-  };
-
-  const handleViewAnnouncement = (announcement) => {
-    setSelectedAnnouncement(announcement);
-    setIsDetailModalOpen(true);
-  };
-
-  const handleOpenDeleteModal = (announcementId) => {
-    setAnnouncementToDelete(announcementId);
-    setDeleteModalOpen(true);
-  };
-
-  const formFields = [
-    { name: "content", label: "Content", type: "textarea" },
-    { name: "urgency", label: "Urgent", type: "checkbox" },
-  ];
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token"); // Assumes token is stored in localStorage after login
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
-
-  const fetchAnnouncements = async () => {
-    try {
-      const response = await axios.get(API_URL, getAuthHeaders());
-      setAnnouncements(response.data);
-    } catch (error) {
-      console.error("Failed to fetch announcements:", error);
-      alert("Failed to fetch announcements. Please make sure you are logged in.");
-    }
-  };
+    if (aIsPast && !bIsPast) return 1;
+    if (!aIsPast && bIsPast) return -1;
+    return new Date(a.dateTime) - new Date(b.dateTime);
+  });
 
   useEffect(() => {
-    fetchAnnouncements();
+    const getAuthHeaders = () => {
+      const token = localStorage.getItem("token");
+      return { headers: { Authorization: `Bearer ${token}` } };
+    };
+
+    const fetchDashboardData = async () => {
+      try {
+        const [patientRes, appointmentRes, announcementRes, roomRes] = await Promise.all([
+          axios.get(PATIENTS_API_URL, getAuthHeaders()),
+          axios.get(APPOINTMENTS_API_URL, getAuthHeaders()),
+          axios.get(ANNOUNCEMENTS_API_URL, getAuthHeaders()),
+          axios.get(ROOMS_API_URL, getAuthHeaders()),
+        ]);
+
+        setPatientCount(patientRes.data.length);
+        const todayApps = appointmentRes.data.filter((app) => isToday(new Date(app.dateTime)));
+        setTodaysAppointments(todayApps);
+
+        if (announcementRes.data.length > 0) {
+          setLatestAnnouncement(announcementRes.data[0]);
+        }
+        const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
+        setAvailableRooms(availableCount);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+        toast.error("Could not load dashboard data. Please log in.");
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   return (
     <>
-      <div className="flex min-h-screen">
-        <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar} />
-        <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? "ml-16" : "ml-64"}`}>
-          {/* Add announcement button */}
-          <div className="flex justify-between items-center mb-6">
-            <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition">
-              {showAddForm ? "×" : "Add New Announcement"}
-            </button>
-          </div>
-
-          {showAddForm && (
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">Add Announcement</h2>
-              <form onSubmit={handleAddAnnouncement}>
-                <div className="grid grid-cols-2 gap-4">
-                  {formFields.map((field) => (
-                    <div key={field.name} className="flex flex-col">
-                      <label htmlFor={field.name} className="mb-1 text-sm font-medium text-gray-600">
-                        {field.label}
-                      </label>
-                      {field.type === "checkbox" ? (
-                        // MODIFIED: This block is changed
-                        <div className="flex items-center space-x-2">
-                          <input type="checkbox" id={field.name} name={field.name} checked={newAnnouncement[field.name]} onChange={handleInputChange} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
-                          <label htmlFor={field.name} className="text-sm text-gray-700">
-                            {field.label}
-                          </label>
-                        </div>
-                      ) : field.type === "textarea" ? (
-                        <textarea id={field.name} name={field.name} value={newAnnouncement[field.name]} onChange={handleInputChange} rows="3" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
-                      ) : (
-                        <input type={field.type} id={field.name} name={field.name} value={newAnnouncement[field.name]} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-end mt-6">
-                  <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                    Add Announcement
-                  </button>
-                </div>
-              </form>
+      {latestAnnouncement && (
+        <div className="border rounded-full px-4 py-2 w-full mb-4">
+          <div className="flex items-center justify-between">
+            <p>
+              <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
+              <span className="text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
+            </p>
+            <div className="flex items-center flex-shrink-0 ml-4">
+              <span className="text-sm text-gray-500 pr-3">{format(new Date(latestAnnouncement.createdAt), "p")}</span>
+              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          <div className="flex flex-col gap-2 w-full h-full border shadow rounded-lg p-6">
-            {announcements?.map((announcement) => (
-              <div key={announcement._id} onClick={() => handleViewAnnouncement(announcement)} className="flex items-center border shadow w-full h-16 p-4 text-center justify-between">
-                {announcement.content}
-                <div className="flex items-center justify-between gap-3">
-                  {announcement.urgency && (
-                    <span
-                      className="w-3 h-3 bg-red-500 rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    ></span>
-                  )}
-                  <span
-                    className="text-sm text-gray-500"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    {new Date(announcement.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenDeleteModal(announcement._id);
-                    }}
-                    className="text-sm text-red-500 hover:text-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="bg-white shadow rounded-md p-4 text-center">
+              <h2 className="text-2xl font-bold">{patientCount}</h2>
+              <p className="text-gray-600">Total Patients</p>
+            </div>
+            <div className="bg-white shadow rounded-md p-4 text-center">
+              <h2 className="text-2xl font-bold">13</h2>
+              <p className="text-gray-600">Doctors</p>
+            </div>
+            <div className="bg-white shadow rounded-md p-4 text-center">
+              <h2 className="text-2xl font-bold">{availableRooms}</h2>
+              <p className="text-gray-600">Rooms Available</p>
+            </div>
           </div>
 
-          <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Announcement Details">
-            {selectedAnnouncement && (
-              <div className="space-y-3">
-                {Object.entries(selectedAnnouncement).map(([key, value]) => {
-                  if (["_id", "__v", "updatedAt"].includes(key)) return null;
-
-                  let formattedKey = key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
-                  let formattedValue = value;
-
-                  if (key === "urgency") {
-                    formattedKey = "Urgent";
-                    formattedValue = value ? "Yes" : "No";
-                  } else if (key === "createdAt") {
-                    formattedValue = new Date(selectedAnnouncement.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
-                  }
-
-                  return (
-                    <div key={key} className="grid grid-cols-3 gap-4">
-                      <p className="font-semibold text-gray-600 col-span-1">{formattedKey}</p>
-                      <p className="text-gray-800 col-span-2">{formattedValue}</p>
+          <div className="col-span-1 bg-white shadow rounded-md p-4">
+            <h3 className="font-semibold text-lg mb-4">Today's Appointments</h3>
+            <ul className="divide-y">
+              {sortedAppointments.length > 0 ? (
+                sortedAppointments.map((appt) => (
+                  <li key={appt._id} className="py-2 flex justify-between items-center">
+                    <div>
+                      <p>{appt.patient}</p>
+                      <p className="text-xs text-gray-500">{appt.doctor}</p>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </Modal>
+                    <span className="text-sm text-blue-600">{new Date() > new Date(appt.dateTime) ? "Finished" : format(new Date(appt.dateTime), "h:mm a")}</span>
+                  </li>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">No appointments scheduled for today.</p>
+              )}
+            </ul>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="bg-blue-600 text-white rounded-md p-4">
+            <h4 className="font-semibold mb-2">Patient per Day</h4>
+            <div className="h-40 flex items-center justify-center text-sm">
+              <PatientChartDay />
+            </div>
+          </div>
+          <div className="bg-white rounded-md shadow p-4">
+            <h4 className="font-semibold mb-2">Patient per Month</h4>
+            <div className="h-40 flex items-center justify-center text-sm">
+              <PatientBarChart />
+            </div>
+          </div>
         </div>
       </div>
-
-      <ConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Delete Announcement" confirmText="Delete">
-        Are you sure you want to delete this announcement? This action cannot be undone.
-      </ConfirmationModal>
     </>
   );
 };
 
-export default Announcement;
+export default Dashboard;
