@@ -1,20 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import SideBar from '../../components/SideBar';
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
-const API_URL = 'http://localhost:5000/api/rooms';
+const API_URL = "http://localhost:5000/api/rooms";
 
 const RoomManagement = () => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
-
-  // MODIFIED: State to hold rooms fetched from the API
   const [rooms, setRooms] = useState([]);
 
   // NEW: Function to get auth headers
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 
@@ -36,10 +31,9 @@ const RoomManagement = () => {
 
   // MODIFIED: Function to toggle status via API call
   const toggleRoomStatus = async (room) => {
-    const newStatus = room.status === 'Available' ? 'Occupied' : 'Available';
+    const newStatus = room.status === "Available" ? "Occupied" : "Available";
     try {
       await axios.put(`${API_URL}/${room._id}`, { status: newStatus }, getAuthHeaders());
-      // For instant UI feedback, we can update state optimistically or re-fetch.
       // Re-fetching ensures data consistency.
       fetchRooms();
       toast.success(`${room.name} is now ${newStatus}`);
@@ -49,47 +43,42 @@ const RoomManagement = () => {
     }
   };
 
-  const availableCount = rooms.filter(room => room.status === 'Available').length;
+  const availableCount = rooms.filter((room) => room.status === "Available").length;
   const occupiedCount = rooms.length - availableCount;
 
   return (
     <>
-      <div className="flex min-h-screen">
-        <SideBar isCollapsed={isSidebarCollapsed} toggleSideBar={toggleSideBar}/>
-        <div className={`flex-1 transition-all duration-300 p-6 ${isSidebarCollapsed ? 'ml-16': 'ml-64'}`}>
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Admin - Room Management</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Admin - Room Management</h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div className="bg-teal-100 border-l-4 border-teal-500 p-4 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-teal-800">Available Rooms</h3>
-              <p className="text-4xl font-bold text-teal-600 mt-2">{availableCount}</p>
-            </div>
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-yellow-800">Occupied Rooms</h3>
-              <p className="text-4xl font-bold text-yellow-600 mt-2">{occupiedCount}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {rooms.map(room => {
-              const isOccupied = room.status === 'Occupied';
-              const cardClasses = `p-6 rounded-lg shadow-md flex flex-col justify-between text-center transition-colors duration-300 ${isOccupied ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`;
-              const buttonClasses = `w-full py-2 rounded-lg font-semibold transition-colors duration-300 ${isOccupied ? 'bg-white text-blue-600 hover:bg-gray-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`;
-
-              return (
-                <div key={room._id} className={cardClasses}>
-                  <div>
-                    <h3 className="text-xl font-bold">{room.name}</h3>
-                    <p className={`text-lg mt-1 ${isOccupied ? 'text-blue-200' : 'text-gray-500'}`}>{room.status}</p>
-                  </div>
-                  <button onClick={() => toggleRoomStatus(room)} className={`mt-4 ${buttonClasses}`}>
-                    {isOccupied ? 'Set Available' : 'Set Occupied'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <div className="bg-teal-100 border-l-4 border-teal-500 p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-teal-800">Available Rooms</h3>
+          <p className="text-4xl font-bold text-teal-600 mt-2">{availableCount}</p>
         </div>
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-yellow-800">Occupied Rooms</h3>
+          <p className="text-4xl font-bold text-yellow-600 mt-2">{occupiedCount}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {rooms.map((room) => {
+          const isOccupied = room.status === "Occupied";
+          const cardClasses = `p-6 rounded-lg shadow-md flex flex-col justify-between text-center transition-colors duration-300 ${isOccupied ? "bg-blue-600 text-white" : "bg-white text-gray-800"}`;
+          const buttonClasses = `w-full py-2 rounded-lg font-semibold transition-colors duration-300 ${isOccupied ? "bg-white text-blue-600 hover:bg-gray-100" : "bg-blue-600 text-white hover:bg-blue-700"}`;
+
+          return (
+            <div key={room._id} className={cardClasses}>
+              <div>
+                <h3 className="text-xl font-bold">{room.name}</h3>
+                <p className={`text-lg mt-1 ${isOccupied ? "text-blue-200" : "text-gray-500"}`}>{room.status}</p>
+              </div>
+              <button onClick={() => toggleRoomStatus(room)} className={`mt-4 ${buttonClasses}`}>
+                {isOccupied ? "Set Available" : "Set Occupied"}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </>
   );
