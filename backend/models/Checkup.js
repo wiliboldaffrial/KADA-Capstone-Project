@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
+const initialCheckupSchema = require('./initialCheckup');
 
 const checkupSchema = new mongoose.Schema({
     patientId: {type: mongoose.Schema.Types.ObjectId, ref: 'Patient'},
+    initialCheckup: initialCheckupSchema,
+
     date: Date,
     details: String,
     doctorNotes: String,

@@ -68,7 +68,7 @@ const ExpandedPatientDetails = ({ patient, onAddCheckup }) => {
             >
                 <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                    Checkup {idx + 1} - {new Date(checkup.date).toLocaleDateString()}
+                    Checkup {idx + 1} - {checkup.date ? new Date(checkup.date).toLocaleDateString() : 'Invalid date'}
                 </span>
                 <div className="space-x-2">
                     <button

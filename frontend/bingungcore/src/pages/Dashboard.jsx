@@ -55,6 +55,7 @@ const Dashboard = () => {
         setPatientCount(patientRes.data.length);
         const todayApps = appointmentRes.data.filter((app) => isToday(new Date(app.dateTime)));
         setTodaysAppointments(todayApps);
+        setPatientCount(todayApps.length);
 
         if (announcementRes.data.length > 0) {
           setLatestAnnouncement(announcementRes.data[0]);
