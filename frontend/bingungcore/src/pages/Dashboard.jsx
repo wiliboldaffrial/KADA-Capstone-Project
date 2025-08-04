@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import PatientChartDay from "../components/PatientChartDay";
 import PatientBarChart from "../components/PatientBarMonth";
 import axios from "axios";
-import { format, isToday } from "date-fns";
+import { format, isToday, startOfWeek, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval } from "date-fns";
 import { toast } from "react-hot-toast";
 
 // Define API URLs
@@ -24,6 +24,8 @@ const Dashboard = () => {
   const [availableRooms, setAvailableRooms] = useState(0);
   const [todaysAppointments, setTodaysAppointments] = useState([]);
   const [latestAnnouncement, setLatestAnnouncement] = useState(null);
+  const [weeklyPatientData, setWeeklyPatientData] = useState([]);
+  const [monthlyPatientData, setMonthlyPatientData] = useState([]);
 
   const sortedAppointments = [...todaysAppointments].sort((a, b) => {
     const now = new Date();
@@ -59,6 +61,47 @@ const Dashboard = () => {
         }
         const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
         setAvailableRooms(availableCount);
+
+        // Process appointments to get weekly data patient
+        const now = new Date();
+        const startOfLast7Days = subDays(now, 6); // Calculate the date 6 days ago
+        const startof6MonthsAgo = subMonths(now, 5);
+
+        const days = eachDayOfInterval({
+          start: startOfLast7Days,
+          end: now,
+        });
+
+        const months = eachMonthOfInterval({
+          start: startof6MonthsAgo,
+          end: now
+        });
+
+        // Map over days and count appointments for each day
+        const counts = days.map(day => {
+          const count = appointmentRes.data.filter(app =>
+            format(new Date(app.dateTime), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
+          ).length;
+          return {
+            day: format(day, 'E'), // E returns Mon, Tue, etc
+            patients: count,
+          };
+        });
+        setWeeklyPatientData(counts);
+
+        const monthLyCounts = months.map(month => {
+          const count = appointmentRes.data.filter(app =>
+            format(new Date(app.dateTime), 'yyyy-MM') === format(month, 'yyyy-MM')
+          ).length;
+          return {
+            month: format(month, 'MMM'),
+            patients: count,
+          };
+        });
+        setMonthlyPatientData(monthLyCounts);
+
+
+
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         toast.error("Could not load dashboard data. Please log in.");
@@ -102,6 +145,7 @@ const Dashboard = () => {
             </div>
           </div>
 
+            
           <div className="col-span-1 bg-white shadow rounded-md p-4">
             <h3 className="font-semibold text-lg mb-4">Today's Appointments</h3>
             <ul className="divide-y">
@@ -125,13 +169,13 @@ const Dashboard = () => {
           <div className="bg-blue-600 text-white rounded-md p-4">
             <h4 className="font-semibold mb-2">Patient per Day</h4>
             <div className="h-40 flex items-center justify-center text-sm">
-              <PatientChartDay />
+              <PatientChartDay data={weeklyPatientData}/>
             </div>
           </div>
           <div className="bg-white rounded-md shadow p-4">
             <h4 className="font-semibold mb-2">Patient per Month</h4>
             <div className="h-40 flex items-center justify-center text-sm">
-              <PatientBarChart />
+              <PatientBarChart data={monthlyPatientData}/>
             </div>
           </div>
         </div>
