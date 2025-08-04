@@ -35,7 +35,11 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
       { path: "/admin/roomManagement", label: "Room Management", iconType: "room" },
     ],
     "doctor": [
+<<<<<<< Updated upstream
       { path: "/doctor/patients/", label: "Patient List", iconType: "patientlist" },
+=======
+      { path: "/doctor/patient/", label: "Patient List", iconType: "patientlist" },
+>>>>>>> Stashed changes
     ],
     "nurse": [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
