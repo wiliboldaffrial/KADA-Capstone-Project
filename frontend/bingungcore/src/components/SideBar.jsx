@@ -82,7 +82,7 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
           <div className="mt-auto p-4 border-t border-white/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 overflow-hidden">
-                <img className="w-8 h-8 rounded-full border border-white object-cover flex-shrink-0" alt="User" />
+                
                 {!isCollapsed && (
                   <div className="text-white text-sm truncate">
                     {/* <-- MODIFIED: Use the userName from the context */}
