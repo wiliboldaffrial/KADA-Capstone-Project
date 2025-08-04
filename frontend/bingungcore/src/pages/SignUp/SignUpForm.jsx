@@ -2,6 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppHeader from "../../components/LoginAppHeader";
 
+// UserContext to manage user state by Qem
+const roleMapping = { 
+  Admin: 'admin/receptionist',
+  Nurse: 'nurse',
+  Doctor: 'doctor',
+};
+
 const SignUpForm = () => {
   const navigate = useNavigate();
 
@@ -123,7 +130,7 @@ const SignUpForm = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            role: role,
+            role: roleMapping[role], // Map role to backend format by Qem
             name: name.trim(),
             email: email.trim(),
             password: password.trim(),

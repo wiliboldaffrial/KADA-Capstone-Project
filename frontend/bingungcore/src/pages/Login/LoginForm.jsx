@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginAppHeader from "../../components/LoginAppHeader";
+import { useUser } from "../../UserContext";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const LoginForm = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { refetchUserData } = useUser();
 
   const handleReturnToRoleSelection = () => {
     navigate("/");
@@ -25,17 +27,20 @@ const LoginForm = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, selectedRole: localStorage.getItem('role') }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+      
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userEmail', data.user.email);
         localStorage.setItem('isAuthenticated', 'true');
+
+        await refetchUserData(); // Refetch user data to update context, avoid load sidebar with old data by Qem
         navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');

@@ -1,7 +1,7 @@
-// routes/patientRoutes.js
 const express = require('express');
 const router = express.Router();
 const Patient = require('../models/Patient');
+const Checkup = require('../models/Checkup');
 
 // Get all patients
 router.get('/', async (req, res) => {
@@ -39,6 +39,23 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ message: 'Patient not found' });
         }
         res.json(patient);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get patient's latest checkup
+router.get('/:id/latest-checkup', async (req, res) => {
+    try {
+        const latestCheckup = await Checkup.findOne({ patientId: req.params.id })
+            .sort({ date: -1 })
+            .populate('patientId');
+            
+        if (!latestCheckup) {
+            return res.status(404).json({ message: 'No checkups found for this patient' });
+        }
+        
+        res.json(latestCheckup);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
