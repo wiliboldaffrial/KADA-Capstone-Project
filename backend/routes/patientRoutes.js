@@ -59,6 +59,21 @@ router.get("/:id/latest-checkup", async (req, res) => {
   }
 });
 
+// Get patient's latest checkup
+router.get("/:id/latest-checkup", async (req, res) => {
+  try {
+    const latestCheckup = await Checkup.findOne({ patientId: req.params.id }).sort({ date: -1 }).populate("patientId");
+
+    if (!latestCheckup) {
+      return res.status(404).json({ message: "No checkups found for this patient" });
+    }
+
+    res.json(latestCheckup);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Create a new patient
 router.post("/", async (req, res) => {
   try {
