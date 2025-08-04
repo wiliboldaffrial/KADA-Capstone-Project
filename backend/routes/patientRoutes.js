@@ -1,7 +1,7 @@
 // routes/patientRoutes.js
 const express = require('express');
 const router = express.Router();
-const Patient = require('../models/Patient');
+const { Patient } = require('../models/Patient'); // Import the Patient model, the fix why patient name does not show up in dashboard, appointment schedule
 
 // Get all patients
 router.get('/', async (req, res) => {

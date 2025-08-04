@@ -160,7 +160,7 @@ const AppointmentSchedule = () => {
 
     const handleInputChange = (e) => {
         setSearchTerm(e.target.value);
-        onChange(e); // Propagate change to parent form state
+        // onChange(e); // Propagate change to parent form state // the cause of the typing error in name bar of adding appointment by Qem
         setDropdownOpen(true);
     };
 
