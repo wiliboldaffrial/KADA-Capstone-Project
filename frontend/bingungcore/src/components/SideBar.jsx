@@ -34,8 +34,10 @@ const SideBar = ({ isCollapsed, toggleSideBar }) => {
       { path: "/admin/appointmentSchedule", label: "Appointment Schedule", iconType: "appoinment" },
       { path: "/admin/roomManagement", label: "Room Management", iconType: "room" },
     ],
-    doctor: [{ path: "/doctor/patientCheckup/:id", label: "Patient List" }],
-    nurse: [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
+    "doctor": [
+      { path: "/doctor/patients/", label: "Patient List", iconType: "patientlist" },
+    ],
+    "nurse": [{ path: "/nurse/patientList", label: "Patient List", iconType: "patientlist" }],
   };
 
   // We use the userRole from context now, not localStorage

@@ -17,7 +17,7 @@ import RoomManagement from "./pages/Admin/RoomManagement";
 
 // Doctor
 import PatientCheckup from "./pages/Doctor/PatientCheckup";
-import PatientListDoctor from "./pages/Doctor/PatientList";
+import Patients from "./pages/Doctor/Patients";
 
 // Nurse
 import PatientList from "./pages/Nurse/PatientList";
@@ -75,10 +75,10 @@ export default function App() {
 
             {/* Doctor-only Routes */}
             <Route
-              path="/doctor/patientList"
+              path="/doctor/patients"
               element={
                 <RequireRole allowedRoles={["doctor"]}>
-                  <PatientListDoctor />
+                  <Patients />
                 </RequireRole>
               }
             />
