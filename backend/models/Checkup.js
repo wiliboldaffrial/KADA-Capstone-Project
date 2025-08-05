@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const initialCheckupSchema = require('./initialCheckup');
 
 const checkupSchema = new mongoose.Schema({
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
@@ -14,7 +15,6 @@ const checkupSchema = new mongoose.Schema({
         weight: String,
         height: String
     },
-    
     details: String,
     doctorNotes: String,
     

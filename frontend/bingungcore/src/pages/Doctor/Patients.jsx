@@ -142,7 +142,7 @@ const PatientPage = () => {
     let filtered = [...patients];
 
     if (searchTerm) {
-      filtered = filtered.filter((patient) => patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || patient.phone?.includes(searchTerm) || patient._id.includes(searchTerm));
+      filtered = filtered.filter((patient) => patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || patient.contact?.includes(searchTerm) || patient._id.includes(searchTerm));
     }
 
     if (filterGender !== "all") {
@@ -334,7 +334,7 @@ const PatientPage = () => {
               </div>
               <div>
                 <span className="font-medium text-gray-600">Age:</span>
-                <p className="text-gray-900">{calculateAge(patient.dateOfBirth)} years</p>
+                <p className="text-gray-900">{calculateAge(patient.birthdate)} years</p>
               </div>
               <div>
                 <span className="font-medium text-gray-600">Gender:</span>
@@ -342,11 +342,11 @@ const PatientPage = () => {
               </div>
               <div>
                 <span className="font-medium text-gray-600">Phone:</span>
-                <p className="text-gray-900">{patient.phone || "Not provided"}</p>
+                <p className="text-gray-900">{patient.contact || "Not provided"}</p>
               </div>
               <div>
                 <span className="font-medium text-gray-600">Date of Birth:</span>
-                <p className="text-gray-900">{formatDate(patient.dateOfBirth)}</p>
+                <p className="text-gray-900">{formatDate(patient.birthdate)}</p>
               </div>
               <div className="col-span-2">
                 <span className="font-medium text-gray-600">Address:</span>
@@ -442,7 +442,7 @@ const PatientPage = () => {
           <div className="space-y-2 text-sm text-gray-600 mb-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              <span>Age: {calculateAge(patient.dateOfBirth)} years</span>
+              <span>Age: {calculateAge(patient.birthdate)} years</span>
             </div>
             <div className="flex items-center gap-2">
               <User className="w-4 h-4" />
@@ -450,7 +450,7 @@ const PatientPage = () => {
             </div>
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4" />
-              <span>{patient.phone || "No phone"}</span>
+              <span>{patient.contact || "No phone"}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
@@ -653,7 +653,7 @@ const PatientPage = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{calculateAge(patient.dateOfBirth)} years</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{calculateAge(patient.birthdate)} years</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               <span
                                 className={`px-2 py-1 text-xs rounded-full ${
@@ -667,7 +667,7 @@ const PatientPage = () => {
                               <div>
                                 <div className="flex items-center gap-1">
                                   <Phone className="w-4 h-4 text-gray-400" />
-                                  {patient.phone || "No phone"}
+                                  {patient.contact || "No phone"}
                                 </div>
                                 <div className="flex items-center gap-1 mt-1">
                                   <MapPin className="w-4 h-4 text-gray-400" />
