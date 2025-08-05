@@ -4,8 +4,10 @@ import { formatDistanceToNow } from "date-fns";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import ConfirmationModal from "../components/ConfirmationModal";
+import { useUser } from "../UserContext";
 
 const API_URL = "http://localhost:5000/api/announcements";
+const USERS_API_URL = "http://localhost:5000/api/users";
 
 const Announcement = () => {
   // All state and handlers for announcements remain the same
@@ -14,20 +16,25 @@ const Announcement = () => {
   const [newAnnouncement, setNewAnnouncement] = useState({ content: "", urgency: false, date: new Date() });
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [authorNamesMap, setAuthorNameMap] = useState([]);
+  const [authorRoleMap, setAuthorRoleMap] = useState([]);
+
+  const {currentUserId, userRole, userName, loading} = useUser();
+  const isAdmin = userRole && userRole.toLowerCase().includes('admin');
 
   const handleAddAnnouncement = async (e) => {
     e.preventDefault();
-    if (!newAnnouncement.content) {
-      alert("Please fill in at least the content field.");
+    if (!currentUserId || !newAnnouncement.content) {
+      toast.error("Please fill in at least the content field.");
       return;
     }
 
     try {
-      await axios.post(API_URL, newAnnouncement, getAuthHeaders());
+      const payload = {...newAnnouncement, author: currentUserId}
+      await axios.post(API_URL, payload, getAuthHeaders());
       toast.success("Announcement successfully added!");
       setShowAddForm(false);
       setNewAnnouncement({ content: "", urgency: false });
@@ -49,7 +56,6 @@ const Announcement = () => {
         await axios.delete(`${API_URL}/${announcementToDelete}`, getAuthHeaders());
         toast.success("Announcement successfully deleted!");
         setSelectedAnnouncement(null);
-        setIsEditing(false);
         fetchAnnouncements();
       } catch (error) {
         console.error("Error deleting announcement:", error);
@@ -88,7 +94,50 @@ const Announcement = () => {
   const fetchAnnouncements = async () => {
     try {
       const response = await axios.get(API_URL, getAuthHeaders());
-      setAnnouncements(response.data);
+      const fetchedAnnouncements = response.data;
+      setAnnouncements(fetchedAnnouncements);
+
+      const uniqueAuthorIds = [...new Set(response.data.map(ann => ann.author))];
+      const newAuthorNames = {};
+      const newAuthorRoles = {};
+
+      for (const authorId of uniqueAuthorIds) {
+        if (authorNamesMap[authorId] && authorRoleMap[authorId]) {
+          newAuthorNames[authorId] = authorNamesMap[authorId];
+          newAuthorRoles[authorId] = authorRoleMap[authorId];
+          continue;
+        }
+        try {
+          const userRes = await axios.get(`${USERS_API_URL}/${authorId}`, getAuthHeaders());
+          if (userRes.data) {
+            newAuthorNames[authorId] = userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1) || "Unknown User";
+            let roleToDisplay = userRes.data.role;
+            if (roleToDisplay && roleToDisplay.toLowerCase() === 'admin/receptionist') {
+              roleToDisplay = 'Admin';
+            } else if (roleToDisplay && roleToDisplay.toLowerCase() === 'doctor') {
+              roleToDisplay = 'Doctor';
+              } else if (roleToDisplay && roleToDisplay.toLowerCase() === 'nurse') {
+                roleToDisplay = 'Nurse';
+              } else {
+                roleToDisplay = roleToDisplay ? (roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1)) : "Unknown Role"; // Capitalize first letter or fallback
+              }
+              newAuthorRoles[authorId] = roleToDisplay;
+            
+          } else {
+            newAuthorNames[authorId] = "Unknown user";
+            newAuthorRoles[authorId] = "Unknown Role";
+          }
+        } catch (userError) {
+          console.error(`Failed to fetch user data for ID ${authorId}:`, userError);
+          newAuthorNames[authorId] = "Unknown User";
+          newAuthorRoles[authorId] = "Unknown Role";
+        }
+      }
+      // Update the author names map, merging with existing names
+      setAuthorNameMap(prevMap => ({ ...prevMap, ...newAuthorNames }));
+      setAuthorRoleMap(prevMap => ({ ...prevMap, ...newAuthorRoles }));
+
+
     } catch (error) {
       console.error("Failed to fetch announcements:", error);
       toast.error("Failed to fetch announcements. Please make sure you are logged in.");
@@ -96,8 +145,14 @@ const Announcement = () => {
   };
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    if (!loading) {
+      fetchAnnouncements();
+    }
+  }, [loading, authorNamesMap, authorRoleMap]);
+
+  if (loading) {
+    return <div className="text-center py-8">Loading...</div>
+  }
 
   return (
     <>
@@ -107,7 +162,7 @@ const Announcement = () => {
       */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Announcements</h1>
-        <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition">
+        <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled={!currentUserId}>
           {showAddForm ? "×" : "Add New Announcement"}
         </button>
       </div>
@@ -124,7 +179,15 @@ const Announcement = () => {
                   </label>
                   {field.type === "checkbox" ? (
                     <div className="flex items-center space-x-2">
-                      <input type="checkbox" id={field.name} name={field.name} checked={newAnnouncement[field.name]} onChange={handleInputChange} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
+                      <input 
+                        type="checkbox" 
+                        id={field.name} 
+                        name={field.name} 
+                        checked={newAnnouncement[field.name]} 
+                        onChange={handleInputChange} 
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!currentUserId}
+                      />
                       <label htmlFor={field.name} className="text-sm text-gray-700">
                         {field.label}
                       </label>
@@ -160,6 +223,10 @@ const Announcement = () => {
                     }}
                   ></span>
                 )}
+
+                <span className="text-sm text-gray-500">
+                  By: {authorRoleMap[announcement.author] && `${authorRoleMap[announcement.author]}`} {authorNamesMap[announcement.author] || 'Loading...'}
+                </span>
                 <span
                   className="text-sm text-gray-500"
                   onClick={(e) => {
@@ -168,6 +235,7 @@ const Announcement = () => {
                 >
                   {new Date(announcement.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
                 </span>
+                {(announcement.author === currentUserId || isAdmin) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -177,6 +245,7 @@ const Announcement = () => {
                 >
                   Delete
                 </button>
+                )}
               </div>
             </div>
           ))
@@ -199,6 +268,11 @@ const Announcement = () => {
                 formattedValue = value ? "Yes" : "No";
               } else if (key === "createdAt") {
                 formattedValue = new Date(selectedAnnouncement.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+              }
+
+              if (key === "author") {
+                formattedKey = "Author";
+                formattedValue = authorNamesMap[value] || value;
               }
 
               return (
