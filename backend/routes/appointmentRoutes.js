@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Appointment = require('../models/Appointment');
+const Checkup = require('../models/Checkup');
 
 // GET all appointments, sorted by date
 router.get('/', async (req, res) => {
@@ -30,32 +31,53 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST a new appointment checkup (used by nurse) by Qem
-// backend/routes/appointments.js
+// POST a new appointment checkup (used by nurse)
 router.post('/:id/checkups', async (req, res) => {
   const { id } = req.params;
   const checkupData = req.body;
 
   try {
+    // 1. Find the appointment
     const appointment = await Appointment.findById(id);
     if (!appointment) {
+      console.error("❌ Appointment not found");
       return res.status(404).json({ message: "Appointment not found" });
     }
 
-    if (!appointment.checkups) {
-      appointment.checkups = [];
-    }
-
+    // 2. Save checkup to appointment
     appointment.checkups.push(checkupData);
     await appointment.save();
+    console.log("✅ Checkup saved to Appointment");
 
-    // Return the last added checkup
-    res.status(201).json(appointment.checkups[appointment.checkups.length - 1]);
+    // // 3. Save checkup to Patient
+    // const patient = await Patient.findById(appointment.patientId);
+    // if (patient) {
+    //   patient.checkups.push(checkupData);
+    //   await patient.save();
+    //   console.log("✅ Checkup saved to Patient");
+    // } else {
+    //   console.warn("⚠️ Patient not found for appointment");
+    // }
+
+    // 4. Save to Checkup collection with initialCheckup field
+    const checkupEntry = new Checkup({
+      patientId: appointment.patientId,
+      initialCheckup: checkupData,
+      aiResponse: checkupData.aiResponse || {}, // Optional
+    });
+
+    await checkupEntry.save();
+    console.log("✅ Checkup saved to Checkup collection");
+
+    // 5. Return the newly saved checkupData
+    res.status(201).json(checkupData);
+
   } catch (error) {
-    console.error("Failed to add checkup:", error);
+    console.error("❌ Error saving checkup:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // PUT to update an appointment
 router.put('/:id', async (req, res) => {
