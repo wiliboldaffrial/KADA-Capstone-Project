@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Home } from "lucide-react";
+import { Home, User, Calendar, Phone, MapPin, FileText, Activity, Save, Plus, X, Stethoscope, Brain, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api";
-
 const PatientCheckup = () => {
   const navigate = useNavigate();
-  const { patientId } = useParams();
+  const params = useParams();
+  
+  const patientId = params._id;
 
   // Core states
   const [patient, setPatient] = useState(null);
@@ -16,10 +16,29 @@ const PatientCheckup = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [doctorNotes, setDoctorNotes] = useState("");
-
-  // AI analysis states
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiResponse, setAiResponse] = useState(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  
+  // New checkup states
+  const [showNewCheckupModal, setShowNewCheckupModal] = useState(false);
+  const [newCheckupData, setNewCheckupData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    type: 'General',
+    details: '',
+    symptoms: '',
+    vitalSigns: {
+      temperature: '',
+      bloodPressure: '',
+      heartRate: '',
+      weight: '',
+      height: ''
+    }
+  });
+  const [createCheckupLoading, setCreateCheckupLoading] = useState(false);
+  
+  // AI states
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
 
   // Helper function to get auth headers
   const getAuthHeaders = () => {
@@ -30,11 +49,11 @@ const PatientCheckup = () => {
     };
   };
 
-  // Fetch patient data and checkups on component mount
+  // Fetch patient data and checkups
   useEffect(() => {
     const loadData = async () => {
       if (!patientId) {
-        setError("No patient ID provided");
+        setError("No patient ID provided in URL");
         setLoading(false);
         return;
       }
@@ -43,26 +62,56 @@ const PatientCheckup = () => {
       setError(null);
 
       try {
-        const [patientResponse, checkupsResponse] = await Promise.all([axios.get(`${API_URL}/patients/${patientId}`, { headers: getAuthHeaders() }), axios.get(`${API_URL}/checkups/patient/${patientId}`, { headers: getAuthHeaders() })]);
+        const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+        
+        // Fetch patient data
+        const patientResponse = await axios.get(
+          `${API_URL}/api/patients/${patientId}`, 
+          { headers: getAuthHeaders() }
+        );
 
-        setPatient(patientResponse.data);
-        setCheckups(checkupsResponse.data);
+        const patientData = patientResponse.data;
+        const normalizedPatient = {
+          ...patientData,
+          dateOfBirth: patientData.birthdate || patientData.dateOfBirth,
+          phone: patientData.contact || patientData.phone,
+        };
 
-        // Auto-select the first checkup if available
-        if (checkupsResponse.data.length > 0) {
-          const firstCheckup = checkupsResponse.data[0];
-          setSelectedCheckup(firstCheckup);
-          setDoctorNotes(firstCheckup.doctorNotes || "");
-          try {
-            setAiResponse(firstCheckup.aiResponse ? JSON.parse(firstCheckup.aiResponse) : null);
-          } catch (e) {
-            console.error("Failed to parse AI response from database:", e);
-            setAiResponse(null);
+        setPatient(normalizedPatient);
+
+        // Fetch checkups from separate collection
+        try {
+          const checkupsResponse = await axios.get(
+            `${API_URL}/api/checkups/patient/${patientId}`, 
+            { headers: getAuthHeaders() }
+          );
+          setCheckups(checkupsResponse.data);
+          
+          if (checkupsResponse.data.length > 0) {
+            const firstCheckup = checkupsResponse.data[0];
+            setSelectedCheckup(firstCheckup);
+            setDoctorNotes(firstCheckup.doctorNotes || "");
           }
+        } catch (checkupError) {
+          console.warn("No checkups found or checkups endpoint not available");
+          setCheckups([]);
         }
+
       } catch (err) {
         console.error("Error loading data:", err);
-        const errorMessage = err.response?.data?.message || "Failed to load patient or checkup data.";
+        
+        let errorMessage = "Failed to load patient data";
+        
+        if (err.response?.status === 404) {
+          errorMessage = "Patient not found. Please check the patient ID.";
+        } else if (err.response?.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (err.response?.status === 403) {
+          errorMessage = "Access denied. You don't have permission to view this patient.";
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -76,181 +125,433 @@ const PatientCheckup = () => {
   const handleCheckupSelect = (checkup) => {
     setSelectedCheckup(checkup);
     setDoctorNotes(checkup.doctorNotes || "");
-    try {
-      setAiResponse(checkup.aiResponse ? JSON.parse(checkup.aiResponse) : null);
-    } catch (e) {
-      console.error("Failed to parse AI response from database:", e);
-      setAiResponse(null);
-    }
     setError(null);
+    setShowAiAnalysis(false);
+    setAiAnalysisResult(null);
+  };
+
+  // Create new checkup
+  const handleCreateCheckup = async () => {
+    if (!newCheckupData.details.trim()) {
+      setError("Please provide checkup details");
+      return;
+    }
+
+    setCreateCheckupLoading(true);
+    setError(null);
+
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      
+      const checkupPayload = {
+        patientId: patientId,
+        date: new Date(newCheckupData.date),
+        type: newCheckupData.type,
+        details: newCheckupData.details,
+        symptoms: newCheckupData.symptoms,
+        vitalSigns: newCheckupData.vitalSigns,
+        doctorNotes: ""
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/checkups`,
+        checkupPayload,
+        { headers: getAuthHeaders() }
+      );
+
+      // Add new checkup to the list
+      setCheckups(prev => [response.data, ...prev]);
+      
+      // Select the new checkup
+      setSelectedCheckup(response.data);
+      setDoctorNotes("");
+      
+      // Reset form
+      setNewCheckupData({
+        date: new Date().toISOString().split('T')[0],
+        type: 'General',
+        details: '',
+        symptoms: '',
+        vitalSigns: {
+          temperature: '',
+          bloodPressure: '',
+          heartRate: '',
+          weight: '',
+          height: ''
+        }
+      });
+      
+      setShowNewCheckupModal(false);
+      setError("Checkup created successfully!");
+      setTimeout(() => setError(null), 3000);
+
+    } catch (err) {
+      console.error("Error creating checkup:", err);
+      setError("Failed to create checkup. Please try again.");
+    } finally {
+      setCreateCheckupLoading(false);
+    }
   };
 
   // Save doctor notes
   const handleSaveNotes = async () => {
-    if (!selectedCheckup || !doctorNotes.trim()) {
+    if (!selectedCheckup) {
+      setError("No checkup selected");
+      return;
+    }
+
+    if (!doctorNotes.trim()) {
       setError("Please enter some notes to save");
       return;
     }
 
+    setSaveLoading(true);
+    setError(null);
+
     try {
-      await axios.put(`${API_URL}/checkups/${selectedCheckup._id}`, { doctorNotes: doctorNotes }, { headers: getAuthHeaders() });
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      
+      const response = await axios.put(
+        `${API_URL}/api/checkups/${selectedCheckup._id}`,
+        { doctorNotes: doctorNotes.trim() },
+        { headers: getAuthHeaders() }
+      );
 
       // Update the checkup in local state
-      setCheckups((prevCheckups) => prevCheckups.map((checkup) => (checkup._id === selectedCheckup._id ? { ...checkup, doctorNotes: doctorNotes } : checkup)));
+      setCheckups(prevCheckups =>
+        prevCheckups.map(checkup =>
+          checkup._id === selectedCheckup._id 
+            ? { ...checkup, doctorNotes: doctorNotes.trim() }
+            : checkup
+        )
+      );
 
-      // Show success message briefly
+      setSelectedCheckup({ ...selectedCheckup, doctorNotes: doctorNotes.trim() });
+
       setError("Notes saved successfully!");
       setTimeout(() => setError(null), 3000);
+
     } catch (err) {
       console.error("Error saving notes:", err);
       setError("Failed to save notes. Please try again.");
+    } finally {
+      setSaveLoading(false);
     }
   };
 
-  // AI consultation function
-  const handleConsultAI = async () => {
-    if (!doctorNotes.trim()) {
-      setError("Please enter medical notes first");
-      return;
-    }
+  // AI Analysis Function
+  const handleAiAnalysis = async () => {
     if (!selectedCheckup) {
       setError("No checkup selected for analysis");
       return;
     }
 
-    setIsAnalyzing(true);
+    setAiAnalysisLoading(true);
     setError(null);
 
     try {
-      const prompt = `
-        Analyze the provided medical notes and return a JSON response with the following structure:
-        {
-          "diagnosis": "Primary diagnosis based on symptoms",
-          "likely_cause": "Most probable underlying cause",
-          "diseases": ["Array of potential diseases/conditions"],
-          "recommended_actions": "Recommended next steps and treatments"
-        }
-        
-        Patient Medical Notes: "${doctorNotes}"
-        
-        Please analyze these notes and provide your assessment in the specified JSON format.
-      `;
-
-      const payload = {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              diagnosis: { type: "STRING" },
-              likely_cause: { type: "STRING" },
-              diseases: {
-                type: "ARRAY",
-                items: { type: "STRING" },
-              },
-              recommended_actions: { type: "STRING" },
-            },
-            required: ["diagnosis", "likely_cause", "diseases", "recommended_actions"],
-          },
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      
+      // Prepare data for AI analysis
+      const analysisData = {
+        patientInfo: {
+          age: calculateAge(patient.dateOfBirth || patient.birthdate),
+          gender: patient.gender,
+          medicalHistory: patient.medicalHistory || "None provided"
         },
+        checkupDetails: selectedCheckup.details,
+        symptoms: selectedCheckup.symptoms || "",
+        vitalSigns: selectedCheckup.vitalSigns || {},
+        doctorNotes: doctorNotes
       };
 
-      const apiKey = "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI analysis failed with status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      // The API returns the structured JSON as a string within the text part
-      const aiAnalysisString = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!aiAnalysisString) {
-        throw new Error("No AI analysis content received.");
-      }
-
-      const analysisData = JSON.parse(aiAnalysisString);
-
-      // Save the AI response to the checkup
-      await axios.put(
-        `${API_URL}/checkups/${selectedCheckup._id}`,
-        {
-          aiResponse: JSON.stringify(analysisData),
-          doctorNotes: doctorNotes,
-        },
+      const response = await axios.post(
+        `${API_URL}/api/ai/analyze-checkup`,
+        analysisData,
         { headers: getAuthHeaders() }
       );
 
-      setAiResponse(analysisData);
+      setAiAnalysisResult(response.data);
+      setShowAiAnalysis(true);
+
+      // Update the checkup with AI response
+      const updatedCheckup = {
+        ...selectedCheckup,
+        aiResponse: response.data
+      };
+
+      // Save AI response to checkup
+      await axios.put(
+        `${API_URL}/api/checkups/${selectedCheckup._id}`,
+        { aiResponse: response.data },
+        { headers: getAuthHeaders() }
+      );
+
+      // Update local state
+      setCheckups(prevCheckups =>
+        prevCheckups.map(checkup =>
+          checkup._id === selectedCheckup._id 
+            ? updatedCheckup
+            : checkup
+        )
+      );
+
+      setSelectedCheckup(updatedCheckup);
+
     } catch (err) {
-      console.error("AI consultation error:", err);
-      setError(`AI consultation failed: ${err.message}`);
+      console.error("Error during AI analysis:", err);
+      setError("Failed to get AI analysis. Please try again.");
     } finally {
-      setIsAnalyzing(false);
+      setAiAnalysisLoading(false);
     }
-  };
-
-  // Result card component for displaying AI response
-  const ResultCard = ({ title, content }) => (
-    <div className="mb-4">
-      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
-      <p className="text-gray-600 bg-gray-50 p-3 rounded-md whitespace-pre-wrap">{content}</p>
-    </div>
-  );
-
-  // Render AI response section
-  const renderAIResponse = () => {
-    if (isAnalyzing) {
-      return (
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      );
-    }
-    if (aiResponse) {
-      return (
-        <div className="space-y-4">
-          <ResultCard title="AI Diagnosis" content={aiResponse.diagnosis} />
-          <ResultCard title="Likely Causes" content={aiResponse.likely_cause} />
-          <ResultCard title="Potential Diseases" content={Array.isArray(aiResponse.diseases) ? aiResponse.diseases.join(", ") : aiResponse.diseases} />
-          <ResultCard title="Recommended Actions" content={aiResponse.recommended_actions} />
-        </div>
-      );
-    }
-    return <p className="text-gray-500">AI insights will appear here after consultation</p>;
   };
 
   // Format date helper
   const formatDate = (dateString) => {
     try {
-      return new Date(dateString).toLocaleDateString();
+      if (!dateString) return "Not provided";
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
     } catch {
       return "Invalid Date";
     }
   };
 
+  // Format date and time helper
+  const formatDateTime = (dateString) => {
+    try {
+      if (!dateString) return "Not provided";
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  // Calculate age helper
+  const calculateAge = (dateOfBirth) => {
+    try {
+      if (!dateOfBirth) return "N/A";
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime())) return "N/A";
+      
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age >= 0 ? age : "N/A";
+    } catch {
+      return "N/A";
+    }
+  };
+
+  // New Checkup Modal Component
+  const NewCheckupModal = () => (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowNewCheckupModal(false)}></div>
+        
+        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Create New Checkup</h3>
+            <button
+              onClick={() => setShowNewCheckupModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Date and Type */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={newCheckupData.date}
+                  onChange={(e) => setNewCheckupData(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select
+                  value={newCheckupData.type}
+                  onChange={(e) => setNewCheckupData(prev => ({ ...prev, type: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="General">General Checkup</option>
+                  <option value="Follow-up">Follow-up</option>
+                  <option value="Emergency">Emergency</option>
+                  <option value="Consultation">Consultation</option>
+                  <option value="Routine">Routine</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Symptoms */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaints / Symptoms</label>
+              <textarea
+                value={newCheckupData.symptoms}
+                onChange={(e) => setNewCheckupData(prev => ({ ...prev, symptoms: e.target.value }))}
+                placeholder="Describe the patient's main complaints and symptoms..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20"
+              />
+            </div>
+
+            {/* Vital Signs */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vital Signs</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Temperature (°C)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={newCheckupData.vitalSigns.temperature}
+                    onChange={(e) => setNewCheckupData(prev => ({ 
+                      ...prev, 
+                      vitalSigns: { ...prev.vitalSigns, temperature: e.target.value }
+                    }))}
+                    placeholder="36.5"
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Blood Pressure</label>
+                  <input
+                    type="text"
+                    value={newCheckupData.vitalSigns.bloodPressure}
+                    onChange={(e) => setNewCheckupData(prev => ({ 
+                      ...prev, 
+                      vitalSigns: { ...prev.vitalSigns, bloodPressure: e.target.value }
+                    }))}
+                    placeholder="120/80"
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Heart Rate (bpm)</label>
+                  <input
+                    type="number"
+                    value={newCheckupData.vitalSigns.heartRate}
+                    onChange={(e) => setNewCheckupData(prev => ({ 
+                      ...prev, 
+                      vitalSigns: { ...prev.vitalSigns, heartRate: e.target.value }
+                    }))}
+                    placeholder="72"
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={newCheckupData.vitalSigns.weight}
+                    onChange={(e) => setNewCheckupData(prev => ({ 
+                      ...prev, 
+                      vitalSigns: { ...prev.vitalSigns, weight: e.target.value }
+                    }))}
+                    placeholder="70"
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Height (cm)</label>
+                  <input
+                    type="number"
+                    value={newCheckupData.vitalSigns.height}
+                    onChange={(e) => setNewCheckupData(prev => ({ 
+                      ...prev, 
+                      vitalSigns: { ...prev.vitalSigns, height: e.target.value }
+                    }))}
+                    placeholder="170"
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Checkup Details */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Physical Examination & Findings *</label>
+              <textarea
+                value={newCheckupData.details}
+                onChange={(e) => setNewCheckupData(prev => ({ ...prev, details: e.target.value }))}
+                placeholder="Describe the physical examination findings, observations, and any tests performed..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setShowNewCheckupModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateCheckup}
+              disabled={createCheckupLoading || !newCheckupData.details.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {createCheckupLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Create Checkup
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-800">Patient Checkup</h1>
-            <button onClick={() => navigate("/doctor/patients")} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            <h1 className="text-3xl font-bold text-gray-900">Patient Checkup</h1>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowNewCheckupModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus size={20} />
+              New Checkup
+            </button>
+            <button
+              onClick={() => navigate("/doctor/patients")}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Home size={20} />
               All Patients
             </button>
@@ -258,123 +559,469 @@ const PatientCheckup = () => {
         </div>
 
         {/* Error Display */}
-        {error && <div className={`mb-6 px-4 py-3 rounded-lg ${error.includes("successfully") ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>{error}</div>}
-
-        {/* Patient Information */}
-        {loading ? (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="animate-pulse space-y-3">
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/5"></div>
-            </div>
+        {error && (
+          <div
+            className={`mb-6 px-4 py-3 rounded-lg border ${
+              error.includes("successfully")
+                ? "bg-green-50 border-green-200 text-green-700"
+                : "bg-red-50 border-red-200 text-red-700"
+            }`}
+          >
+            {error}
           </div>
-        ) : patient ? (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-semibold">{patient.name}</h2>
-                <div className="mt-2 space-y-1 text-gray-600">
-                  <p>ID: {patient._id}</p>
-                  <p>Gender: {patient.gender}</p>
-                  <p>Date of Birth: {formatDate(patient.dateOfBirth)}</p>
-                  <p>Phone: {patient.phone}</p>
-                  <p>Address: {patient.address}</p>
+        )}
+
+        {loading ? (
+          /* Loading State */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
               </div>
             </div>
           </div>
         ) : (
-          !loading && (
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <p className="text-gray-500">Patient not found</p>
-            </div>
-          )
-        )}
-
-        {/* Checkups Layout */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Checkup List */}
-          <div className="col-span-4">
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="text-lg font-semibold mb-4">Checkups</h3>
-              <div className="space-y-2">
-                {loading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="animate-pulse">
-                        <div className="h-16 bg-gray-100 rounded-lg"></div>
-                      </div>
-                    ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Patient Info & Checkup List */}
+            <div className="space-y-6">
+              {/* Patient Information */}
+              {patient ? (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <User className="w-6 h-6 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Patient Information</h2>
                   </div>
-                ) : checkups.length > 0 ? (
-                  checkups.map((checkup) => (
-                    <button
-                      key={checkup._id}
-                      onClick={() => handleCheckupSelect(checkup)}
-                      className={`w-full text-left p-4 rounded-lg transition-all ${selectedCheckup?._id === checkup._id ? "bg-blue-50 border-2 border-blue-500" : "hover:bg-gray-50 border-2 border-transparent"}`}
-                    >
-                      <p className="font-medium">Checkup on {formatDate(checkup.date)}</p>
-                      <p className="text-sm text-gray-600">{checkup.type || "General Checkup"}</p>
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-4">No checkups found</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Checkup Details */}
-          <div className="col-span-8">
-            {selectedCheckup ? (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Checkup Details</h3>
-
-                {/* Show read-only details for nurse checkups, editable for doctor checkups */}
-                {selectedCheckup.type === "nurse" ? (
-                  <div className="prose max-w-none mb-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Nurse Notes:</h4>
-                      <p className="whitespace-pre-wrap">{selectedCheckup.details || "No details available"}</p>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">{patient.name}</h3>
+                      <p className="text-sm text-gray-500">ID: {patient._id}</p>
+                      {patient.nik && <p className="text-sm text-gray-500">NIK: {patient.nik}</p>}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600">Age:</span>
+                        <p className="text-gray-900">{calculateAge(patient.dateOfBirth || patient.birthdate)} years</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600">Gender:</span>
+                        <p className="text-gray-900">{patient.gender || "Not specified"}</p>
+                      </div>
+                      {patient.bloodType && (
+                        <div className="col-span-2">
+                          <span className="font-medium text-gray-600">Blood Type:</span>
+                          <p className="text-gray-900">{patient.bloodType}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">DOB:</span>
+                        <span className="text-gray-900">{formatDate(patient.dateOfBirth || patient.birthdate)}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">Contact:</span>
+                        <span className="text-gray-900">{patient.phone || patient.contact || "Not provided"}</span>
+                      </div>
+                      
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <span className="text-gray-600">Address:</span>
+                        <span className="text-gray-900">{patient.address || "Not provided"}</span>
+                      </div>
+                      
+                      {patient.medicalHistory && (
+                        <div className="pt-2 border-t">
+                          <span className="font-medium text-gray-600">Medical History:</span>
+                          <p className="text-gray-900 text-xs mt-1">{patient.medicalHistory}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <textarea
-                    className="w-full h-48 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 mb-6"
-                    value={doctorNotes}
-                    onChange={(e) => setDoctorNotes(e.target.value)}
-                    placeholder="Enter your medical notes here..."
-                  />
-                )}
-
-                {/* AI Response Section */}
-                <div className="pt-6 border-t">
-                  <h4 className="text-lg font-semibold mb-4">AI Analysis</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg min-h-[100px] mb-4">{renderAIResponse()}</div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-end gap-2">
-                    {selectedCheckup.type !== "nurse" && (
-                      <button onClick={handleSaveNotes} className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                        Save Notes
-                      </button>
-                    )}
-                    <button
-                      onClick={handleConsultAI}
-                      disabled={isAnalyzing || !doctorNotes.trim()}
-                      className="px-6 py-2 border border-blue-500 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isAnalyzing ? "Analyzing..." : "Consult with AI"}
-                    </button>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="text-center text-gray-500">
+                    <User className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Patient not found</p>
+                    <p className="text-sm mt-1">Looking for patient ID: {patientId}</p>
                   </div>
                 </div>
+              )}
+
+              {/* Checkups List */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-6 h-6 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">Checkups ({checkups.length})</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowNewCheckupModal(true)}
+                    className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  {checkups.length > 0 ? (
+                    checkups.map((checkup, index) => (
+                      <button
+                        key={checkup._id || index}
+                        onClick={() => handleCheckupSelect(checkup)}
+                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          selectedCheckup && (selectedCheckup._id === checkup._id || selectedCheckup === checkup)
+                            ? "bg-blue-50 border-blue-200 shadow-sm"
+                            : "bg-gray-50 border-transparent hover:bg-gray-100"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {formatDate(checkup.date)}
+                            </p>
+                            <p className="text-sm text-gray-600 capitalize">
+                              {checkup.type || "General"} Checkup
+                            </p>
+                            {checkup.symptoms && (
+                              <p className="text-xs text-gray-500 mt-1 truncate">
+                                {checkup.symptoms.substring(0, 50)}...
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">
+                              {formatDateTime(checkup.createdAt || checkup.date)}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {checkup.doctorNotes && (
+                                <div className="flex items-center gap-1">
+                                  <Stethoscope className="w-3 h-3 text-blue-500" />
+                                  <span className="text-xs text-blue-600">Diagnosed</span>
+                                </div>
+                              )}
+                              {checkup.aiResponse && (
+                                <div className="flex items-center gap-1">
+                                  <Brain className="w-3 h-3 text-purple-500" />
+                                  <span className="text-xs text-purple-600">AI</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p>No checkups found</p>
+                      <p className="text-sm mt-1">Create a new checkup to get started</p>
+                      <button
+                        onClick={() => setShowNewCheckupModal(true)}
+                        className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Create First Checkup
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">Select a checkup from the list to view details.</div>
-            )}
+            </div>
+
+            {/* Right Column - Checkup Details */}
+            <div className="lg:col-span-2">
+              {selectedCheckup ? (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">Checkup Details</h3>
+                      <p className="text-gray-600 mt-1">
+                        {formatDateTime(selectedCheckup.date)} • {selectedCheckup.type || "General"} Checkup
+                      </p>
+                    </div>
+                    {selectedCheckup.doctorNotes && !selectedCheckup.aiResponse && (
+                      <button
+                        onClick={handleAiAnalysis}
+                        disabled={aiAnalysisLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                      >
+                        {aiAnalysisLoading ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Brain className="w-4 h-4" />
+                            AI Cross-Check
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Symptoms */}
+                  {selectedCheckup.symptoms && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-3">Chief Complaints / Symptoms</h4>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p className="text-gray-800 whitespace-pre-wrap">{selectedCheckup.symptoms}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Vital Signs */}
+                  {selectedCheckup.vitalSigns && Object.values(selectedCheckup.vitalSigns).some(v => v) && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-3">Vital Signs</h4>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          {selectedCheckup.vitalSigns.temperature && (
+                            <div>
+                              <span className="font-medium text-green-800">Temperature:</span>
+                              <p className="text-green-700">{selectedCheckup.vitalSigns.temperature}°C</p>
+                            </div>
+                          )}
+                          {selectedCheckup.vitalSigns.bloodPressure && (
+                            <div>
+                              <span className="font-medium text-green-800">Blood Pressure:</span>
+                              <p className="text-green-700">{selectedCheckup.vitalSigns.bloodPressure}</p>
+                            </div>
+                          )}
+                          {selectedCheckup.vitalSigns.heartRate && (
+                            <div>
+                              <span className="font-medium text-green-800">Heart Rate:</span>
+                              <p className="text-green-700">{selectedCheckup.vitalSigns.heartRate} bpm</p>
+                            </div>
+                          )}
+                          {selectedCheckup.vitalSigns.weight && (
+                            <div>
+                              <span className="font-medium text-green-800">Weight:</span>
+                              <p className="text-green-700">{selectedCheckup.vitalSigns.weight} kg</p>
+                            </div>
+                          )}
+                          {selectedCheckup.vitalSigns.height && (
+                            <div>
+                              <span className="font-medium text-green-800">Height:</span>
+                              <p className="text-green-700">{selectedCheckup.vitalSigns.height} cm</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Physical Examination Details */}
+                  {selectedCheckup.details && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-3">Physical Examination & Findings</h4>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-gray-800 whitespace-pre-wrap">{selectedCheckup.details}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Response Section */}
+                  {(selectedCheckup.aiResponse || showAiAnalysis) && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                          <Brain className="w-5 h-5 text-purple-600" />
+                          AI Medical Analysis
+                        </h4>
+                        {selectedCheckup.aiResponse && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Analysis Complete
+                          </div>
+                        )}
+                      </div>
+                      
+                      {aiAnalysisResult || selectedCheckup.aiResponse ? (
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+                          {(aiAnalysisResult?.possibleDiagnoses || selectedCheckup.aiResponse?.possibleDiagnoses) && (
+                            <div>
+                              <span className="font-medium text-purple-800">Possible Diagnoses:</span>
+                              <ul className="text-purple-700 mt-1 list-disc list-inside">
+                                {(aiAnalysisResult?.possibleDiagnoses || selectedCheckup.aiResponse?.possibleDiagnoses).map((diagnosis, index) => (
+                                  <li key={index}>{diagnosis}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {(aiAnalysisResult?.recommendedActions || selectedCheckup.aiResponse?.recommendedActions) && (
+                            <div>
+                              <span className="font-medium text-purple-800">Recommended Actions:</span>
+                              <p className="text-purple-700 mt-1">{aiAnalysisResult?.recommendedActions || selectedCheckup.aiResponse?.recommendedActions}</p>
+                            </div>
+                          )}
+                          
+                          {(aiAnalysisResult?.riskFactors || selectedCheckup.aiResponse?.riskFactors) && (
+                            <div>
+                              <span className="font-medium text-purple-800">Risk Factors:</span>
+                              <ul className="text-purple-700 mt-1 list-disc list-inside">
+                                {(aiAnalysisResult?.riskFactors || selectedCheckup.aiResponse?.riskFactors).map((risk, index) => (
+                                  <li key={index}>{risk}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {(aiAnalysisResult?.followUpRecommendations || selectedCheckup.aiResponse?.followUpRecommendations) && (
+                            <div>
+                              <span className="font-medium text-purple-800">Follow-up Recommendations:</span>
+                              <p className="text-purple-700 mt-1">{aiAnalysisResult?.followUpRecommendations || selectedCheckup.aiResponse?.followUpRecommendations}</p>
+                            </div>
+                          )}
+                          
+                          {(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence) && (
+                            <div className="border-t pt-3">
+                              <span className="font-medium text-purple-800">Confidence Level:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex-1 bg-purple-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-purple-600 h-2 rounded-full" 
+                                    style={{ width: `${(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence)}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-purple-700 text-sm font-medium">
+                                  {(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence)}%
+                                </span>
+                              </div>
+                              {(aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation) && (
+                                <p className="text-purple-600 text-sm mt-1">
+                                  {aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="border-t pt-3">
+                            <div className="flex items-center gap-2 text-xs text-purple-600">
+                              <AlertCircle className="w-4 h-4" />
+                              <span>This AI analysis is for reference only. Always use clinical judgment for final diagnosis and treatment decisions.</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                          <Brain className="w-12 h-12 mx-auto mb-2 text-purple-400" />
+                          <p className="text-purple-700">AI analysis will appear here after cross-checking</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Doctor Notes */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                        <Stethoscope className="w-5 h-5 text-blue-600" />
+                        Doctor's Diagnosis & Treatment Plan
+                      </h4>
+                      {selectedCheckup.doctorNotes && (
+                        <span className="text-xs text-gray-500">
+                          Last updated: {formatDateTime(selectedCheckup.updatedAt || selectedCheckup.date)}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <textarea
+                      className="w-full h-64 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={doctorNotes}
+                      onChange={(e) => setDoctorNotes(e.target.value)}
+                      placeholder="Enter your medical assessment, diagnosis, treatment plan, medications, and recommendations here..."
+                    />
+                    
+                    <div className="flex justify-between items-center mt-3">
+                      <p className="text-sm text-gray-500">
+                        {doctorNotes.length} characters
+                      </p>
+                      <div className="flex gap-3">
+                        {doctorNotes.trim() && !selectedCheckup.aiResponse && (
+                          <button
+                            onClick={handleAiAnalysis}
+                            disabled={aiAnalysisLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                          >
+                            {aiAnalysisLoading ? (
+                              <>
+                                <Loader className="w-4 h-4 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Brain className="w-4 h-4" />
+                                AI Cross-Check
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={saveLoading || !doctorNotes.trim()}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {saveLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Save Diagnosis
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Checkup Selected</h3>
+                  <p className="text-gray-600 mb-4">
+                    Select a checkup from the list to view and edit details, or create a new one
+                  </p>
+                  {checkups.length === 0 && patient && (
+                    <button
+                      onClick={() => setShowNewCheckupModal(true)}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Create First Checkup
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* New Checkup Modal */}
+        {showNewCheckupModal && <NewCheckupModal />}
       </div>
     </div>
   );
