@@ -12,6 +12,7 @@ export const useUser = () => useContext(UserContext);
 export const UserProvider = ({ children }) => {
   const [userName, setUserName] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const getAuthHeaders = () => {
@@ -32,6 +33,7 @@ export const UserProvider = ({ children }) => {
       try {
         const decoded = jwtDecode(token);
         const userId = decoded.id;
+        setCurrentUserId(userId);
 
         const res = await axios.get(`http://localhost:5000/api/users/${userId}`, getAuthHeaders());
 
@@ -43,10 +45,12 @@ export const UserProvider = ({ children }) => {
         console.error("Failed to fetch user data:", error);
         setUserName(null);
         setUserRole(null);
+        setCurrentUserId(null);
       }
     } else {
       setUserName(null);
       setUserRole(null);
+      setCurrentUserId(null);
     }
 
     setLoading(false);
@@ -59,6 +63,7 @@ export const UserProvider = ({ children }) => {
   const value = {
     userName,
     userRole,
+    currentUserId,
     loading,
     refetchUserData: fetchUserData, // Expose a method to refetch user data
   };
