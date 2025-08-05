@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Home, User, Calendar, Phone, MapPin, FileText, Activity, Save, Plus, X, Stethoscope, Brain, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -41,13 +41,13 @@ const PatientCheckup = () => {
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
 
   // Helper function to get auth headers
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem("token");
     return {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
-  };
+  }, []);
 
   // Fetch patient data and checkups
   useEffect(() => {
@@ -119,19 +119,42 @@ const PatientCheckup = () => {
     };
 
     loadData();
-  }, [patientId]);
+  }, [patientId, getAuthHeaders]);
 
   // Handle checkup selection
-  const handleCheckupSelect = (checkup) => {
+  const handleCheckupSelect = useCallback((checkup) => {
     setSelectedCheckup(checkup);
     setDoctorNotes(checkup.doctorNotes || "");
     setError(null);
     setShowAiAnalysis(false);
     setAiAnalysisResult(null);
-  };
+  }, []);
+
+  // Handle doctor notes change
+  const handleDoctorNotesChange = useCallback((e) => {
+    setDoctorNotes(e.target.value);
+  }, []);
+
+  // Handle new checkup data changes
+  const handleNewCheckupChange = useCallback((field, value) => {
+    setNewCheckupData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  const handleVitalSignChange = useCallback((field, value) => {
+    setNewCheckupData(prev => ({
+      ...prev,
+      vitalSigns: {
+        ...prev.vitalSigns,
+        [field]: value
+      }
+    }));
+  }, []);
 
   // Create new checkup
-  const handleCreateCheckup = async () => {
+  const handleCreateCheckup = useCallback(async () => {
     if (!newCheckupData.details.trim()) {
       setError("Please provide checkup details");
       return;
@@ -153,11 +176,15 @@ const PatientCheckup = () => {
         doctorNotes: ""
       };
 
+      console.log('Creating checkup with payload:', checkupPayload);
+
       const response = await axios.post(
         `${API_URL}/api/checkups`,
         checkupPayload,
         { headers: getAuthHeaders() }
       );
+
+      console.log('Checkup created successfully:', response.data);
 
       // Add new checkup to the list
       setCheckups(prev => [response.data, ...prev]);
@@ -187,14 +214,28 @@ const PatientCheckup = () => {
 
     } catch (err) {
       console.error("Error creating checkup:", err);
-      setError("Failed to create checkup. Please try again.");
+      console.error("Error response:", err.response?.data);
+      
+      let errorMessage = "Failed to create checkup. Please try again.";
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.status === 404) {
+        errorMessage = "Patient not found. Please refresh the page.";
+      } else if (err.response?.status === 401) {
+        errorMessage = "Authentication failed. Please log in again.";
+      }
+      
+      setError(errorMessage);
     } finally {
       setCreateCheckupLoading(false);
     }
-  };
+  }, [newCheckupData, patientId, getAuthHeaders]);
 
   // Save doctor notes
-  const handleSaveNotes = async () => {
+  const handleSaveNotes = useCallback(async () => {
     if (!selectedCheckup) {
       setError("No checkup selected");
       return;
@@ -237,11 +278,11 @@ const PatientCheckup = () => {
     } finally {
       setSaveLoading(false);
     }
-  };
+  }, [selectedCheckup, doctorNotes, getAuthHeaders]);
 
   // AI Analysis Function
-  const handleAiAnalysis = async () => {
-    if (!selectedCheckup) {
+  const handleAiAnalysis = useCallback(async () => {
+    if (!selectedCheckup || !patient) {
       setError("No checkup selected for analysis");
       return;
     }
@@ -304,10 +345,10 @@ const PatientCheckup = () => {
     } finally {
       setAiAnalysisLoading(false);
     }
-  };
+  }, [selectedCheckup, patient, doctorNotes, getAuthHeaders]);
 
   // Format date helper
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     try {
       if (!dateString) return "Not provided";
       return new Date(dateString).toLocaleDateString('en-US', {
@@ -318,10 +359,10 @@ const PatientCheckup = () => {
     } catch {
       return "Invalid Date";
     }
-  };
+  }, []);
 
   // Format date and time helper
-  const formatDateTime = (dateString) => {
+  const formatDateTime = useCallback((dateString) => {
     try {
       if (!dateString) return "Not provided";
       return new Date(dateString).toLocaleString('en-US', {
@@ -334,10 +375,10 @@ const PatientCheckup = () => {
     } catch {
       return "Invalid Date";
     }
-  };
+  }, []);
 
   // Calculate age helper
-  const calculateAge = (dateOfBirth) => {
+  const calculateAge = useCallback((dateOfBirth) => {
     try {
       if (!dateOfBirth) return "N/A";
       const today = new Date();
@@ -355,182 +396,177 @@ const PatientCheckup = () => {
     } catch {
       return "N/A";
     }
-  };
+  }, []);
+
+  // Memoized patient age
+  const patientAge = useMemo(() => {
+    if (!patient) return "N/A";
+    return calculateAge(patient.dateOfBirth || patient.birthdate);
+  }, [patient, calculateAge]);
 
   // New Checkup Modal Component
-  const NewCheckupModal = () => (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowNewCheckupModal(false)}></div>
-        
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Create New Checkup</h3>
-            <button
-              onClick={() => setShowNewCheckupModal(false)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+  const NewCheckupModal = useMemo(() => {
+    if (!showNewCheckupModal) return null;
 
-          <div className="space-y-4">
-            {/* Date and Type */}
-            <div className="grid grid-cols-2 gap-4">
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowNewCheckupModal(false)}></div>
+          
+          <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Create New Checkup</h3>
+              <button
+                onClick={() => setShowNewCheckupModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Date and Type */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={newCheckupData.date}
+                    onChange={(e) => handleNewCheckupChange('date', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <select
+                    value={newCheckupData.type}
+                    onChange={(e) => handleNewCheckupChange('type', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="General">General Checkup</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Consultation">Consultation</option>
+                    <option value="Routine">Routine</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Symptoms */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input
-                  type="date"
-                  value={newCheckupData.date}
-                  onChange={(e) => setNewCheckupData(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaints / Symptoms</label>
+                <textarea
+                  value={newCheckupData.symptoms}
+                  onChange={(e) => handleNewCheckupChange('symptoms', e.target.value)}
+                  placeholder="Describe the patient's main complaints and symptoms..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20"
                 />
               </div>
+
+              {/* Vital Signs */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  value={newCheckupData.type}
-                  onChange={(e) => setNewCheckupData(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="General">General Checkup</option>
-                  <option value="Follow-up">Follow-up</option>
-                  <option value="Emergency">Emergency</option>
-                  <option value="Consultation">Consultation</option>
-                  <option value="Routine">Routine</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Vital Signs</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Temperature (°C)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={newCheckupData.vitalSigns.temperature}
+                      onChange={(e) => handleVitalSignChange('temperature', e.target.value)}
+                      placeholder="36.5"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Blood Pressure</label>
+                    <input
+                      type="text"
+                      value={newCheckupData.vitalSigns.bloodPressure}
+                      onChange={(e) => handleVitalSignChange('bloodPressure', e.target.value)}
+                      placeholder="120/80"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Heart Rate (bpm)</label>
+                    <input
+                      type="number"
+                      value={newCheckupData.vitalSigns.heartRate}
+                      onChange={(e) => handleVitalSignChange('heartRate', e.target.value)}
+                      placeholder="72"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Weight (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={newCheckupData.vitalSigns.weight}
+                      onChange={(e) => handleVitalSignChange('weight', e.target.value)}
+                      placeholder="70"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Height (cm)</label>
+                    <input
+                      type="number"
+                      value={newCheckupData.vitalSigns.height}
+                      onChange={(e) => handleVitalSignChange('height', e.target.value)}
+                      placeholder="170"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Checkup Details */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Physical Examination & Findings *</label>
+                <textarea
+                  value={newCheckupData.details}
+                  onChange={(e) => handleNewCheckupChange('details', e.target.value)}
+                  placeholder="Describe the physical examination findings, observations, and any tests performed..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                  required
+                />
               </div>
             </div>
 
-            {/* Symptoms */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaints / Symptoms</label>
-              <textarea
-                value={newCheckupData.symptoms}
-                onChange={(e) => setNewCheckupData(prev => ({ ...prev, symptoms: e.target.value }))}
-                placeholder="Describe the patient's main complaints and symptoms..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20"
-              />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowNewCheckupModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCheckup}
+                disabled={createCheckupLoading || !newCheckupData.details.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {createCheckupLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create Checkup
+                  </>
+                )}
+              </button>
             </div>
-
-            {/* Vital Signs */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vital Signs</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Temperature (°C)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={newCheckupData.vitalSigns.temperature}
-                    onChange={(e) => setNewCheckupData(prev => ({ 
-                      ...prev, 
-                      vitalSigns: { ...prev.vitalSigns, temperature: e.target.value }
-                    }))}
-                    placeholder="36.5"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Blood Pressure</label>
-                  <input
-                    type="text"
-                    value={newCheckupData.vitalSigns.bloodPressure}
-                    onChange={(e) => setNewCheckupData(prev => ({ 
-                      ...prev, 
-                      vitalSigns: { ...prev.vitalSigns, bloodPressure: e.target.value }
-                    }))}
-                    placeholder="120/80"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Heart Rate (bpm)</label>
-                  <input
-                    type="number"
-                    value={newCheckupData.vitalSigns.heartRate}
-                    onChange={(e) => setNewCheckupData(prev => ({ 
-                      ...prev, 
-                      vitalSigns: { ...prev.vitalSigns, heartRate: e.target.value }
-                    }))}
-                    placeholder="72"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Weight (kg)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={newCheckupData.vitalSigns.weight}
-                    onChange={(e) => setNewCheckupData(prev => ({ 
-                      ...prev, 
-                      vitalSigns: { ...prev.vitalSigns, weight: e.target.value }
-                    }))}
-                    placeholder="70"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Height (cm)</label>
-                  <input
-                    type="number"
-                    value={newCheckupData.vitalSigns.height}
-                    onChange={(e) => setNewCheckupData(prev => ({ 
-                      ...prev, 
-                      vitalSigns: { ...prev.vitalSigns, height: e.target.value }
-                    }))}
-                    placeholder="170"
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Checkup Details */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Physical Examination & Findings *</label>
-              <textarea
-                value={newCheckupData.details}
-                onChange={(e) => setNewCheckupData(prev => ({ ...prev, details: e.target.value }))}
-                placeholder="Describe the physical examination findings, observations, and any tests performed..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setShowNewCheckupModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleCreateCheckup}
-              disabled={createCheckupLoading || !newCheckupData.details.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {createCheckupLoading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Create Checkup
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }, [showNewCheckupModal, newCheckupData, createCheckupLoading, handleNewCheckupChange, handleVitalSignChange, handleCreateCheckup]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -613,7 +649,7 @@ const PatientCheckup = () => {
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <span className="font-medium text-gray-600">Age:</span>
-                        <p className="text-gray-900">{calculateAge(patient.dateOfBirth || patient.birthdate)} years</p>
+                        <p className="text-gray-900">{patientAge} years</p>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Gender:</span>
@@ -949,7 +985,7 @@ const PatientCheckup = () => {
                     <textarea
                       className="w-full h-64 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       value={doctorNotes}
-                      onChange={(e) => setDoctorNotes(e.target.value)}
+                      onChange={handleDoctorNotesChange}
                       placeholder="Enter your medical assessment, diagnosis, treatment plan, medications, and recommendations here..."
                     />
                     
@@ -1021,7 +1057,7 @@ const PatientCheckup = () => {
         )}
 
         {/* New Checkup Modal */}
-        {showNewCheckupModal && <NewCheckupModal />}
+        {NewCheckupModal}
       </div>
     </div>
   );
