@@ -8,7 +8,7 @@ router.get("/", async (req, res) => {
   try {
     // MODIFICATION: Add .populate('patientId') to link to the patient document
     const appointments = await Appointment.find()
-      // .populate("patientId", "name") // Fetches the Patient's ID and name
+      // .populate("patientId", "name") // Fetches the Patient's ID and name\
       .sort({ dateTime: 1 });
     res.json(appointments);
   } catch (error) {
@@ -34,7 +34,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// POST a new appointment checkup (used by nurse)
 router.post("/:id/checkups", async (req, res) => {
   const { id } = req.params;
   const checkupData = req.body;
@@ -72,11 +71,24 @@ router.post("/:id/checkups", async (req, res) => {
     // await checkupEntry.save();
     // console.log("Checkup saved to Checkup collection");
 
-    // 5. Return the newly saved checkupData
+    // 4. Return the newly saved checkupData
     res.status(201).json(checkupData);
   } catch (error) {
     console.error("Error saving checkup:", error.message);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Reset initial checkup for an appointment
+router.post("/:id/checkups/reset", async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    appointment.checkups = [];
+    await appointment.save();
+    res.json({ message: "Initial checkup reset" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
