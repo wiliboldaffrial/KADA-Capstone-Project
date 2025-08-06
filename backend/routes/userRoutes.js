@@ -17,4 +17,16 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// GET all doctors
+router.get("/role/doctors", async (req, res) => {
+  try {
+    // Find all users with role 'doctor' and select only 'name' and '_id' fields
+    const doctors = await User.find({ role: "doctor" }).select("name _id");
+    res.json(doctors);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
