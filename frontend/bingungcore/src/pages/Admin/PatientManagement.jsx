@@ -123,6 +123,59 @@ const PatientManagement = () => {
     setIsEditModalOpen(true);
   };
 
+  // Helper function to render complex data types
+  const renderValue = (key, value) => {
+    if (value === null || value === undefined) {
+      return "N/A";
+    }
+    
+    if (key === "birthdate") {
+      return new Date(value).toLocaleDateString();
+    }
+    
+    if (typeof value === "object") {
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return "No records";
+        }
+        return (
+          <div className="space-y-2">
+            {value.map((item, index) => (
+              <div key={index} className="p-2 bg-gray-50 rounded text-sm">
+                {typeof item === "object" ? (
+                  <div className="space-y-1">
+                    {Object.entries(item).map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="font-medium capitalize">{k}:</span>
+                        <span>{String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  String(item)
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      } else {
+        // Handle objects
+        return (
+          <div className="p-2 bg-gray-50 rounded text-sm space-y-1">
+            {Object.entries(value).map(([k, v]) => (
+              <div key={k} className="flex justify-between">
+                <span className="font-medium capitalize">{k}:</span>
+                <span>{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    }
+    
+    return String(value);
+  };
+
   const formFields = [
     { name: "nik", label: "NIK", type: "text" },
     { name: "name", label: "Name", type: "text" },
@@ -215,14 +268,17 @@ const PatientManagement = () => {
 
       <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Patient Details">
         {selectedPatient && (
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-96 overflow-y-auto">
             {Object.entries(selectedPatient).map(([key, value]) => {
               if (key === "_id" || key === "age" || key === "__v" || key === "createdAt" || key === "updatedAt") return null;
               const formattedKey = key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+              
               return (
-                <div key={key} className="grid grid-cols-3 gap-4">
+                <div key={key} className="grid grid-cols-3 gap-4 border-b border-gray-100 pb-2">
                   <p className="font-semibold text-gray-600 col-span-1">{formattedKey}</p>
-                  <p className="text-gray-800 col-span-2">{key === "birthdate" ? new Date(value).toLocaleDateString() : value}</p>
+                  <div className="text-gray-800 col-span-2">
+                    {renderValue(key, value)}
+                  </div>
                 </div>
               );
             })}
