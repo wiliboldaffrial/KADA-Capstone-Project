@@ -66,31 +66,36 @@ const Dashboard = () => {
           const latest = announcementRes.data[0];
           setLatestAnnouncement(latest);
 
-          if (latest.author && !authorNameMap[latest.author]) {
+          if (
+            latest.author &&
+            typeof latest.author === "string" &&
+            latest.author !== "undefined" &&
+            latest.author.length === 24 && // MongoDB ObjectId length
+            !authorNameMap[latest.author]
+          ) {
             try {
               const userRes = await axios.get(`${USERS_API_URL}/${latest.author}`, getAuthHeaders());
               if (userRes.data) {
-                setAuthorNameMap(prevMap => ({...prevMap, [latest.author]: userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1)}));
+                setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1) }));
                 let roleToDisplay = userRes.data.role;
-                if (roleToDisplay && roleToDisplay.toLowerCase() === 'admin/receptionist') {
-                  roleToDisplay = 'Admin';
+                if (roleToDisplay && roleToDisplay.toLowerCase() === "admin/receptionist") {
+                  roleToDisplay = "Admin";
                 } else if (roleToDisplay) {
-                  roleToDisplay = roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1)
+                  roleToDisplay = roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1);
                 } else {
                   roleToDisplay = "Unknown Role";
                 }
-                setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: roleToDisplay }));
+                setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: roleToDisplay }));
               } else {
-                setAuthorNameMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown User" }));
-                setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown Role" }));
+                setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown User" }));
+                setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown Role" }));
               }
             } catch (userError) {
               console.error(`Failed to fetch user data for ID ${latest.author}:`, userError);
-              setAuthorNameMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown User" }));
-              setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown Role" }));
+              setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown User" }));
+              setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown Role" }));
             }
           }
-
         }
         const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
         setAvailableRooms(availableCount);
@@ -107,34 +112,27 @@ const Dashboard = () => {
 
         const months = eachMonthOfInterval({
           start: startof6MonthsAgo,
-          end: now
+          end: now,
         });
 
         // Map over days and count appointments for each day
-        const counts = days.map(day => {
-          const count = appointmentRes.data.filter(app =>
-            format(new Date(app.dateTime), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-          ).length;
+        const counts = days.map((day) => {
+          const count = appointmentRes.data.filter((app) => format(new Date(app.dateTime), "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).length;
           return {
-            day: format(day, 'E'), // E returns Mon, Tue, etc
+            day: format(day, "E"), // E returns Mon, Tue, etc
             patients: count,
           };
         });
         setWeeklyPatientData(counts);
 
-        const monthLyCounts = months.map(month => {
-          const count = appointmentRes.data.filter(app =>
-            format(new Date(app.dateTime), 'yyyy-MM') === format(month, 'yyyy-MM')
-          ).length;
+        const monthLyCounts = months.map((month) => {
+          const count = appointmentRes.data.filter((app) => format(new Date(app.dateTime), "yyyy-MM") === format(month, "yyyy-MM")).length;
           return {
-            month: format(month, 'MMM'),
+            month: format(month, "MMM"),
             patients: count,
           };
         });
         setMonthlyPatientData(monthLyCounts);
-
-
-
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         toast.error("Could not load dashboard data. Please log in.");
@@ -152,7 +150,9 @@ const Dashboard = () => {
             <p>
               <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
               {latestAnnouncement.author && (
-                <span className="text-sm text-gray-500">{authorRoleMap[latestAnnouncement.author] && `${authorRoleMap[latestAnnouncement.author]}`} {authorNameMap[latestAnnouncement.author] || 'Loading...'}:</span>
+                <span className="text-sm text-gray-500">
+                  {authorRoleMap[latestAnnouncement.author] && `${authorRoleMap[latestAnnouncement.author]}`} {authorNameMap[latestAnnouncement.author] || "Loading..."}:
+                </span>
               )}
               <span className="text-sm text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
             </p>
@@ -181,7 +181,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-            
           <div className="col-span-1 bg-white shadow rounded-md p-4">
             <h3 className="font-semibold text-lg mb-4">Today's Appointments</h3>
             <ul className="divide-y">
@@ -205,13 +204,13 @@ const Dashboard = () => {
           <div className="bg-blue-600 text-white rounded-md p-4">
             <h4 className="font-semibold mb-2">Patient per Day</h4>
             <div className="h-40 flex items-center justify-center text-sm">
-              <PatientChartDay data={weeklyPatientData}/>
+              <PatientChartDay data={weeklyPatientData} />
             </div>
           </div>
           <div className="bg-white rounded-md shadow p-4">
             <h4 className="font-semibold mb-2">Patient per Month</h4>
             <div className="h-40 flex items-center justify-center text-sm">
-              <PatientBarChart data={monthlyPatientData}/>
+              <PatientBarChart data={monthlyPatientData} />
             </div>
           </div>
         </div>

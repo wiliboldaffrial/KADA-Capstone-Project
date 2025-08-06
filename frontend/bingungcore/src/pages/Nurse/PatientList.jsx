@@ -2,13 +2,11 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
-import ConfirmationModal from "../../components/ConfirmationModal"; // Adjust path if necessary
+import ConfirmationModal from "../../components/ConfirmationModal";
 
-// API Endpoints as per your routes
 const APPOINTMENTS_URL = "http://localhost:5000/api/appointments";
 const CHECKUPS_URL = "http://localhost:5000/api/checkups";
 
-// This component is for displaying the DOCTOR'S diagnosis from the Checkup.js schema
 const DoctorCheckupDetail = ({ checkup }) => {
   if (!checkup) {
     return (
@@ -17,7 +15,6 @@ const DoctorCheckupDetail = ({ checkup }) => {
       </div>
     );
   }
-
   return (
     <div className="p-4 rounded-lg bg-gray-50 h-full">
       <h3 className="font-bold text-lg mb-3">Doctor's Diagnosis Details</h3>
@@ -53,20 +50,14 @@ const PatientList = () => {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [nurseName, setNurseName] = useState("");
-
-  // State for the NURSE'S initial checkup form
   const initialFormState = { weight: "", bloodPressure: "", temperature: "", notes: "" };
   const [initialCheckupForm, setInitialCheckupForm] = useState(initialFormState);
-
-  // State for the DOCTOR'S historical diagnoses
   const [doctorHistory, setDoctorHistory] = useState([]);
-  const [activeDoctorCheckup, setActiveDoctorCheckup] = useState(null); // For detail view
+  const [activeDoctorCheckup, setActiveDoctorCheckup] = useState(null);
 
   const getAuthHeaders = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
-  // Fetch logged-in user's name from localStorage
   useEffect(() => {
-    // Replace 'userName' with the actual key you use for storing the user's name
     const loggedInUserName = localStorage.getItem("userName") || "User";
     setNurseName(loggedInUserName);
   }, []);
@@ -84,35 +75,33 @@ const PatientList = () => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // This function orchestrates the data loading when an appointment is clicked
+  // Fetch doctor checkup history by patient name
+  const fetchDoctorHistory = async (patientId) => {
+    try {
+      const response = await axios.get(`${CHECKUPS_URL}/patient/${patientId}`, getAuthHeaders());
+      setDoctorHistory(response.data);
+    } catch (error) {
+      setDoctorHistory([]);
+      toast.error("Could not fetch doctor's diagnosis history.");
+    }
+  };
+
+  // When an appointment is selected
   const handleToggleAppointment = async (appointment) => {
     const isOpening = selectedAppointmentId !== appointment._id;
-
-    // Reset states
     setDoctorHistory([]);
     setActiveDoctorCheckup(null);
     setSelectedAppointmentId(isOpening ? appointment._id : null);
 
     if (isOpening) {
-      // 1. Set the Nurse's Initial Checkup form data
-      // This data comes from the `checkups` array within the APPOINTMENT object
+      // Set nurse checkup form data
       const nurseCheckup = Array.isArray(appointment.checkups) && appointment.checkups.length > 0 ? appointment.checkups[0] : initialFormState;
       setInitialCheckupForm(nurseCheckup);
 
-      // 2. Fetch the Doctor's All-Time Checkup History
-      // This data comes from the separate `checkups` collection using the patient's ID
-      const patientId = appointment.patientId?._id || appointment.patientId;
-      if (patientId) {
-        try {
-          const historyResponse = await axios.get(`${CHECKUPS_URL}/patient/${patientId}`, getAuthHeaders());
-          setDoctorHistory(historyResponse.data);
-        } catch (error) {
-          toast.error("Could not fetch doctor's diagnosis history.");
-          console.error("Doctor History Fetch Error:", error);
-        }
-      } else {
-        console.warn("Cannot fetch doctor history: `patientId` is missing from the appointment data. Please ensure you .populate('patientId') in your backend appointment route.");
-        toast.error("Patient ID is missing, cannot load doctor history.");
+      // Fetch doctor checkup history by patient name
+      const patientName = appointment.patient;
+      if (patientName) {
+        await fetchDoctorHistory(patientName);
       }
     }
   };
@@ -122,6 +111,7 @@ const PatientList = () => {
     setInitialCheckupForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Add initial checkup
   const handleAddInitialCheckup = async (e) => {
     e.preventDefault();
     if (!selectedAppointmentId) return;
@@ -133,24 +123,35 @@ const PatientList = () => {
     }
 
     const toastId = toast.loading("Saving Initial Checkup...");
-    // This correctly posts to your `/api/appointments/:id/checkups` route
     const endpoint = `${APPOINTMENTS_URL}/${selectedAppointmentId}/checkups`;
 
     try {
       const checkupData = { ...initialCheckupForm, date: new Date().toISOString() };
       await axios.post(endpoint, checkupData, getAuthHeaders());
       toast.success("Initial Checkup Saved!", { id: toastId });
-
-      // Refresh the data to show the newly added checkup in the form
       await fetchAppointments();
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not save checkup.", { id: toastId });
     }
   };
 
+  // Reset initial checkup (delete from appointment)
+  const handleResetCheckup = async () => {
+    if (!selectedAppointmentId) return;
+    const endpoint = `${APPOINTMENTS_URL}/${selectedAppointmentId}/checkups/reset`;
+    const toastId = toast.loading("Resetting Initial Checkup...");
+    try {
+      await axios.post(endpoint, {}, getAuthHeaders());
+      setInitialCheckupForm(initialFormState);
+      toast.success("Initial Checkup reset. You can now re-enter the data.", { id: toastId });
+      await fetchAppointments();
+    } catch (error) {
+      toast.error("Could not reset checkup.", { id: toastId });
+    }
+  };
+
   const filteredAppointments = appointments.filter((app) => {
-    // Defensive check to ensure patient name exists and is a string
-    const patientName = app.patientId?.name || app.patient;
+    const patientName = app.patient;
     return typeof patientName === "string" && patientName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -168,7 +169,7 @@ const PatientList = () => {
         <div className="space-y-4">
           {filteredAppointments.map((app) => {
             const isSelected = selectedAppointmentId === app._id;
-            const patientName = app.patientId?.name || app.patient;
+            const patientName = app.patient;
 
             return (
               <div key={app._id} className="bg-white rounded-xl shadow-sm">
@@ -186,7 +187,7 @@ const PatientList = () => {
                 {isSelected && (
                   <div className="border-t p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div className="lg:col-span-3 space-y-6">
-                      {/* Section 1: NURSE'S CHECKUP (from appointment.checkups) */}
+                      {/* Section 1: NURSE'S CHECKUP */}
                       <div className="bg-white border p-4 rounded-lg">
                         <h3 className="font-bold text-lg mb-4">Initial Checkup by Nurse</h3>
                         <form onSubmit={handleAddInitialCheckup} className="space-y-4">
@@ -197,7 +198,7 @@ const PatientList = () => {
                           </div>
                           <textarea name="notes" value={initialCheckupForm.notes || ""} onChange={handleFormChange} placeholder="Notes / Keluhan" rows="3" className="p-2 border rounded-md w-full"></textarea>
                           <div className="flex justify-end space-x-3">
-                            <button type="button" onClick={() => setInitialCheckupForm(initialFormState)} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+                            <button type="button" onClick={handleResetCheckup} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
                               Reset
                             </button>
                             <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg">
@@ -207,7 +208,7 @@ const PatientList = () => {
                         </form>
                       </div>
 
-                      {/* Section 2: DOCTOR'S HISTORY (from the separate /api/checkups/patient/:id call) */}
+                      {/* Section 2: DOCTOR'S HISTORY */}
                       <div className="bg-white border p-4 rounded-lg">
                         <h3 className="font-bold text-lg mb-4">Doctor Checkup History (All Time)</h3>
                         <div className="space-y-3">
