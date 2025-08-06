@@ -63,14 +63,14 @@ router.post("/:id/checkups", async (req, res) => {
     }
 
     // 4. Save to Checkup collection with initialCheckup field
-    const checkupEntry = new Checkup({
-      patientId: appointment.patientId,
-      initialCheckup: checkupData,
-      aiResponse: checkupData.aiResponse || {}, // Optional
-    });
+    // const checkupEntry = new Checkup({
+    //   patientId: appointment.patientId,
+    //   initialCheckup: checkupData,
+    //   aiResponse: checkupData.aiResponse || {}, // Optional
+    // });
 
-    await checkupEntry.save();
-    console.log("Checkup saved to Checkup collection");
+    // await checkupEntry.save();
+    // console.log("Checkup saved to Checkup collection");
 
     // 5. Return the newly saved checkupData
     res.status(201).json(checkupData);
