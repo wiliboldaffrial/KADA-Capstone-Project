@@ -62,7 +62,7 @@ const PatientCheckup = () => {
       setError(null);
 
       try {
-        const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+        const API_URL = process.env.REACT_APP_API_URL;
         
         // Fetch patient data
         const patientResponse = await axios.get(
@@ -164,7 +164,7 @@ const PatientCheckup = () => {
     setError(null);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      const API_URL = process.env.REACT_APP_API_URL;
       
       const checkupPayload = {
         patientId: patientId,
@@ -250,7 +250,7 @@ const PatientCheckup = () => {
     setError(null);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      const API_URL = process.env.REACT_APP_API_URL;
       
       const response = await axios.put(
         `${API_URL}/api/checkups/${selectedCheckup._id}`,
@@ -291,7 +291,7 @@ const PatientCheckup = () => {
     setError(null);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+      const API_URL = process.env.REACT_APP_API_URL;
       
       // Prepare data for AI analysis
       const analysisData = {
