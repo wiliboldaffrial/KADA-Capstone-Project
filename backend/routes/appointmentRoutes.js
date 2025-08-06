@@ -1,94 +1,53 @@
 const express = require("express");
 const router = express.Router();
 const Appointment = require("../models/Appointment");
-const Checkup = require("../models/Checkup");
-const Patient = require("../models/Patient");
 
+// GET all appointments with populated patient and doctor details
 router.get("/", async (req, res) => {
   try {
-    // Populate both patient and doctor references
     const appointments = await Appointment.find()
-      // .populate("patientId", "name") // Fetches the Patient's ID and name\
-
-      .populate("doctor", "name") // Populate doctor with name
+      .populate("patient") // Populates the full patient object
+      .populate("doctor")  // Populates the full doctor (User) object
       .sort({ dateTime: 1 });
     
-    // Transform the data to include the names directly for frontend compatibility
-    const transformedAppointments = appointments.map(appointment => ({
-      ...appointment.toObject(),
-      patientName: appointment.patient ? appointment.patient.name : 'Unknown Patient',
-      doctorName: appointment.doctor ? appointment.doctor.name : 'Unknown Doctor'
-    }));
-    
-    res.json(transformedAppointments);
+    res.json(appointments);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// POST /api/appointments — Create a new appointment
+// POST a new appointment (expects IDs for patient and doctor)
 router.post("/", async (req, res) => {
   try {
-    const { patient, doctor, dateTime, notes } = req.body;
-
-    if (!patient || !doctor || !dateTime) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const newAppointment = new Appointment({ patient, doctor, dateTime, notes });
+    const newAppointment = new Appointment(req.body);
     await newAppointment.save();
     
-    // Populate the created appointment before sending response
+    // Re-fetch and populate the new appointment to send back to the client
     const populatedAppointment = await Appointment.findById(newAppointment._id)
-      .populate("patient", "name nik")
-      .populate("doctor", "name");
-    
+      .populate("patient")
+      .populate("doctor");
+      
     res.status(201).json(populatedAppointment);
   } catch (error) {
     console.error("Failed to create appointment:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error while creating appointment" });
   }
 });
 
+// POST to add a nurse's initial checkup to a specific appointment
 router.post("/:id/checkups", async (req, res) => {
-  const { id } = req.params;
-  const checkupData = req.body;
-
   try {
-    // 1. Find the appointment
-    const appointment = await Appointment.findById(id);
+    const appointment = await Appointment.findById(req.params.id);
     if (!appointment) {
-      console.error("Appointment not found");
       return res.status(404).json({ message: "Appointment not found" });
     }
 
-    // 2. Save checkup to appointment
-    appointment.checkups.push(checkupData);
+    // Add the new checkup data to the appointment's embedded checkups array
+    appointment.checkups.push(req.body);
     await appointment.save();
-    console.log("Checkup saved to Appointment");
-
-    // 3. Save checkup to Patient
-    const patient = await Patient.findOne({ name: appointment.patient });
-    if (patient) {
-      patient.checkups.push(checkupData);
-      await patient.save();
-      console.log("Checkup saved to Patient");
-    } else {
-      console.warn("Patient not found for appointment");
-    }
-
-    // 4. Save to Checkup collection with initialCheckup field
-    // const checkupEntry = new Checkup({
-    //   patientId: appointment.patientId,
-    //   initialCheckup: checkupData,
-    //   aiResponse: checkupData.aiResponse || {}, // Optional
-    // });
-
-    // await checkupEntry.save();
-    // console.log("Checkup saved to Checkup collection");
-
-    // 4. Return the newly saved checkupData
-    res.status(201).json(checkupData);
+    
+    // Return the newly added checkup (it's the last one in the array)
+    res.status(201).json(appointment.checkups[appointment.checkups.length - 1]);
   } catch (error) {
     console.error("Error saving checkup:", error.message);
     res.status(500).json({ message: "Server error" });
@@ -98,10 +57,13 @@ router.post("/:id/checkups", async (req, res) => {
 // Reset initial checkup for an appointment
 router.post("/:id/checkups/reset", async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { $set: { checkups: [] } }, // Clear the checkups array
+      { new: true }
+    );
     if (!appointment) return res.status(404).json({ message: "Appointment not found" });
-    appointment.checkups = [];
-    await appointment.save();
+    
     res.json({ message: "Initial checkup reset" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -112,8 +74,9 @@ router.post("/:id/checkups/reset", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
-      .populate("patient", "name nik")
-      .populate("doctor", "name");
+      .populate("patient")
+      .populate("doctor");
+      
     if (!updatedAppointment) {
       return res.status(404).json({ message: "Appointment not found" });
     }
