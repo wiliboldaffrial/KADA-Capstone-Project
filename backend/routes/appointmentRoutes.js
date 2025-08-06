@@ -7,7 +7,7 @@ router.get("/", async (req, res) => {
   try {
     // MODIFICATION: Add .populate('patientId') to link to the patient document
     const appointments = await Appointment.find()
-      .populate("patientId", "name") // Fetches the Patient's ID and name
+      // .populate("patientId", "name") // Fetches the Patient's ID and name
       .sort({ dateTime: 1 });
     res.json(appointments);
   } catch (error) {
