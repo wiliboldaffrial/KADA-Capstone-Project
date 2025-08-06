@@ -1,25 +1,27 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Appointment = require('../models/Appointment');
-const Checkup = require('../models/Checkup');
+const Appointment = require("../models/Appointment");
+const Checkup = require("../models/Checkup");
 
-// GET all appointments, sorted by date
-router.get('/', async (req, res) => {
-    try {
-        const appointments = await Appointment.find().sort({ dateTime: 1 });
-        res.json(appointments);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+router.get("/", async (req, res) => {
+  try {
+    // MODIFICATION: Add .populate('patientId') to link to the patient document
+    const appointments = await Appointment.find()
+      .populate("patientId", "name") // Fetches the Patient's ID and name
+      .sort({ dateTime: 1 });
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
-// POST /api/appointments — Create a new appointment 
-router.post('/', async (req, res) => {
+// POST /api/appointments — Create a new appointment
+router.post("/", async (req, res) => {
   try {
     const { patient, doctor, dateTime, notes } = req.body;
 
     if (!patient || !doctor || !dateTime) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     const newAppointment = new Appointment({ patient, doctor, dateTime, notes });
@@ -32,7 +34,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST a new appointment checkup (used by nurse)
-router.post('/:id/checkups', async (req, res) => {
+router.post("/:id/checkups", async (req, res) => {
   const { id } = req.params;
   const checkupData = req.body;
 
@@ -71,38 +73,36 @@ router.post('/:id/checkups', async (req, res) => {
 
     // 5. Return the newly saved checkupData
     res.status(201).json(checkupData);
-
   } catch (error) {
     console.error("❌ Error saving checkup:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-
 // PUT to update an appointment
-router.put('/:id', async (req, res) => {
-    try {
-        const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!updatedAppointment) {
-            return res.status(404).json({ message: 'Appointment not found' });
-        }
-        res.json(updatedAppointment);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
+router.put("/:id", async (req, res) => {
+  try {
+    const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!updatedAppointment) {
+      return res.status(404).json({ message: "Appointment not found" });
     }
+    res.json(updatedAppointment);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
 // DELETE an appointment
-router.delete('/:id', async (req, res) => {
-    try {
-        const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
-        if (!deletedAppointment) {
-            return res.status(404).json({ message: 'Appointment not found' });
-        }
-        res.json({ message: 'Appointment deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+router.delete("/:id", async (req, res) => {
+  try {
+    const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
+    if (!deletedAppointment) {
+      return res.status(404).json({ message: "Appointment not found" });
     }
+    res.json({ message: "Appointment deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 module.exports = router;
