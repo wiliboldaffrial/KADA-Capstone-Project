@@ -7,12 +7,13 @@ import axios from "axios";
 
 const APPOINTMENT_API_URL = "http://localhost:5000/api/appointments";
 const PATIENT_API_URL = "http://localhost:5000/api/patients";
-const doctors = ["Dr. Dumbledore", "Dr. Snape", "Dr. McGonagall", "Dr. Sprout"];
+const USER_API_URL = "http://localhost:5000/api/users";
 
 const AppointmentSchedule = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [patientList, setPatientList] = useState([]);
+  const [doctorList, setDoctorList] = useState([]); // New state for doctors
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -38,6 +39,9 @@ const AppointmentSchedule = () => {
         ...app,
         date: format(new Date(app.dateTime), "yyyy-MM-dd"),
         time: format(new Date(app.dateTime), "h:mm a"),
+        // Use the populated names for display
+        patientDisplayName: app.patientName || (app.patient ? app.patient.name : 'Unknown Patient'),
+        doctorDisplayName: app.doctorName || (app.doctor ? app.doctor.name : 'Unknown Doctor')
       }));
       setAppointments(formattedAppointments);
     } catch (error) {
@@ -56,9 +60,21 @@ const AppointmentSchedule = () => {
     }
   };
 
+  // New function to fetch doctors
+  const fetchDoctorList = async () => {
+    try {
+      const response = await axios.get(`${USER_API_URL}/role/doctors`, getAuthHeaders());
+      setDoctorList(response.data);
+    } catch (error) {
+      console.error("Failed to fetch doctor list:", error);
+      toast.error("Could not load doctor list.");
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
     fetchPatientList();
+    fetchDoctorList(); // Add this to fetch doctors on component mount
   }, []);
 
   // --- CRUD Handlers (largely unchanged) ---
@@ -117,7 +133,13 @@ const AppointmentSchedule = () => {
 
   const handleEditClick = () => {
     const formattedDateTime = selectedAppointment.dateTime ? new Date(new Date(selectedAppointment.dateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
-    setEditingData({ ...selectedAppointment, dateTime: formattedDateTime });
+    setEditingData({ 
+      ...selectedAppointment, 
+      dateTime: formattedDateTime,
+      // Set the ObjectId values for the form
+      patient: selectedAppointment.patient ? selectedAppointment.patient._id || selectedAppointment.patient : "",
+      doctor: selectedAppointment.doctor ? selectedAppointment.doctor._id || selectedAppointment.doctor : ""
+    });
     setIsEditing(true);
   };
 
@@ -127,14 +149,22 @@ const AppointmentSchedule = () => {
   };
 
   // --- Searchable Patient Dropdown Component ---
-  const SearchablePatientInput = ({ value, onChange, patientList }) => {
-    const [searchTerm, setSearchTerm] = useState(value || "");
+  const SearchablePatientInput = ({ value, onChange, patientList, displayValue }) => {
+    const [searchTerm, setSearchTerm] = useState("");
     const [isDropdownOpen, setDropdownOpen] = useState(false);
     const wrapperRef = useRef(null);
 
     useEffect(() => {
-      setSearchTerm(value || "");
-    }, [value]);
+      // If we have a displayValue (for editing), use it, otherwise try to find the patient name by ID
+      if (displayValue) {
+        setSearchTerm(displayValue);
+      } else if (value && patientList.length > 0) {
+        const patient = patientList.find(p => p._id === value);
+        setSearchTerm(patient ? patient.name : "");
+      } else {
+        setSearchTerm("");
+      }
+    }, [value, displayValue, patientList]);
 
     useEffect(() => {
       function handleClickOutside(event) {
@@ -150,12 +180,14 @@ const AppointmentSchedule = () => {
 
     const handleInputChange = (e) => {
       setSearchTerm(e.target.value);
-      onChange(e); // Propagate change to parent form state
+      // Clear the selected patient ID when user types
+      const syntheticEvent = { target: { name: "patient", value: "" } };
+      onChange(syntheticEvent);
       setDropdownOpen(true);
     };
 
     const handleSelectPatient = (patient) => {
-      const syntheticEvent = { target: { name: "patient", value: patient.name } };
+      const syntheticEvent = { target: { name: "patient", value: patient._id } };
       onChange(syntheticEvent);
       setSearchTerm(patient.name);
       setDropdownOpen(false);
@@ -216,9 +248,9 @@ const AppointmentSchedule = () => {
                     <option value="" disabled>
                       Select a doctor
                     </option>
-                    {doctors.map((doc) => (
-                      <option key={doc} value={doc}>
-                        {doc}
+                    {doctorList.map((doctor) => (
+                      <option key={doctor._id} value={doctor._id}>
+                        {doctor.name}
                       </option>
                     ))}
                   </select>
@@ -289,7 +321,7 @@ const AppointmentSchedule = () => {
                   <div className="mt-1 space-y-1 overflow-y-auto max-h-24">
                     {dayAppointments.map((app) => (
                       <div key={app._id} onClick={() => setSelectedAppointment(app)} className="bg-blue-500 text-white text-xs rounded-md p-1 truncate cursor-pointer hover:bg-blue-700">
-                        {app.patient} - {app.time}
+                        {app.patientDisplayName} - {app.time}
                       </div>
                     ))}
                   </div>
@@ -319,16 +351,21 @@ const AppointmentSchedule = () => {
                       <label htmlFor="edit-patient" className="mb-1 text-sm font-medium text-gray-600">
                         Patient's Name
                       </label>
-                      <SearchablePatientInput value={editingData.patient} onChange={handleEditInputChange} patientList={patientList} />
+                      <SearchablePatientInput 
+                        value={editingData.patient} 
+                        onChange={handleEditInputChange} 
+                        patientList={patientList}
+                        displayValue={selectedAppointment.patientDisplayName}
+                      />
                     </div>
                     <div className="flex flex-col">
                       <label htmlFor="edit-doctor" className="mb-1 text-sm font-medium text-gray-600">
                         Doctor
                       </label>
                       <select id="edit-doctor" name="doctor" value={editingData.doctor} onChange={handleEditInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                        {doctors.map((doc) => (
-                          <option key={doc} value={doc}>
-                            {doc}
+                        {doctorList.map((doctor) => (
+                          <option key={doctor._id} value={doctor._id}>
+                            {doctor.name}
                           </option>
                         ))}
                       </select>
@@ -373,10 +410,10 @@ const AppointmentSchedule = () => {
                       <strong>Time:</strong> {selectedAppointment.time}
                     </p>
                     <p>
-                      <strong>Patient:</strong> {selectedAppointment.patient}
+                      <strong>Patient:</strong> {selectedAppointment.patientDisplayName}
                     </p>
                     <p>
-                      <strong>Doctor:</strong> {selectedAppointment.doctor}
+                      <strong>Doctor:</strong> {selectedAppointment.doctorDisplayName}
                     </p>
                     <div>
                       <strong className="block mb-1">Notes:</strong>

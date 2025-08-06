@@ -424,7 +424,7 @@ const PatientPage = () => {
     const isExpanded = expandedPatient && expandedPatient._id === patient._id;
 
     return (
-      <div className="border border-gray-200 p-4 mb-4">
+      <div className="border border-gray-200 bg-white p-4 mb-4 hover:bg-gray-50 cursor-pointer">
         <div className="cursor-pointer" onClick={() => handlePatientExpansion(patient)}>
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -610,7 +610,7 @@ const PatientPage = () => {
           ) : (
             <>
               {/* Desktop Table View - bg-white, rounded, and shadow classes removed */}
-              <div className="hidden lg:block overflow-hidden mb-6">
+              <div className="hidden lg:block overflow-hidden mb-6 rounded-lg shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -636,12 +636,12 @@ const PatientPage = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {currentPatients.map((patient) => {
                       const isExpanded = expandedPatient && expandedPatient._id === patient._id;
                       return (
                         <React.Fragment key={patient._id}>
-                          <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => handlePatientExpansion(patient)}>
+                          <tr className="bg-white hover:bg-gray-200 cursor-pointer" onClick={() => handlePatientExpansion(patient)}>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div>
