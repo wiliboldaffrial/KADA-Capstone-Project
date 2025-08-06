@@ -22,8 +22,8 @@ const Announcement = () => {
   const [authorNamesMap, setAuthorNameMap] = useState([]);
   const [authorRoleMap, setAuthorRoleMap] = useState([]);
 
-  const {currentUserId, userRole, userName, loading} = useUser();
-  const isAdmin = userRole && userRole.toLowerCase().includes('admin');
+  const { currentUserId, userRole, userName, loading } = useUser();
+  const isAdmin = userRole && userRole.toLowerCase().includes("admin");
 
   const handleAddAnnouncement = async (e) => {
     e.preventDefault();
@@ -33,7 +33,7 @@ const Announcement = () => {
     }
 
     try {
-      const payload = {...newAnnouncement, author: currentUserId}
+      const payload = { ...newAnnouncement, author: currentUserId };
       await axios.post(API_URL, payload, getAuthHeaders());
       toast.success("Announcement successfully added!");
       setShowAddForm(false);
@@ -97,7 +97,7 @@ const Announcement = () => {
       const fetchedAnnouncements = response.data;
       setAnnouncements(fetchedAnnouncements);
 
-      const uniqueAuthorIds = [...new Set(response.data.map(ann => ann.author))];
+      const uniqueAuthorIds = [...new Set(response.data.map((ann) => ann.author))];
       const newAuthorNames = {};
       const newAuthorRoles = {};
 
@@ -112,17 +112,16 @@ const Announcement = () => {
           if (userRes.data) {
             newAuthorNames[authorId] = userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1) || "Unknown User";
             let roleToDisplay = userRes.data.role;
-            if (roleToDisplay && roleToDisplay.toLowerCase() === 'admin/receptionist') {
-              roleToDisplay = 'Admin';
-            } else if (roleToDisplay && roleToDisplay.toLowerCase() === 'doctor') {
-              roleToDisplay = 'Doctor';
-              } else if (roleToDisplay && roleToDisplay.toLowerCase() === 'nurse') {
-                roleToDisplay = 'Nurse';
-              } else {
-                roleToDisplay = roleToDisplay ? (roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1)) : "Unknown Role"; // Capitalize first letter or fallback
-              }
-              newAuthorRoles[authorId] = roleToDisplay;
-            
+            if (roleToDisplay && roleToDisplay.toLowerCase() === "admin/receptionist") {
+              roleToDisplay = "Admin";
+            } else if (roleToDisplay && roleToDisplay.toLowerCase() === "doctor") {
+              roleToDisplay = "Doctor";
+            } else if (roleToDisplay && roleToDisplay.toLowerCase() === "nurse") {
+              roleToDisplay = "Nurse";
+            } else {
+              roleToDisplay = roleToDisplay ? roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1) : "Unknown Role"; // Capitalize first letter or fallback
+            }
+            newAuthorRoles[authorId] = roleToDisplay;
           } else {
             newAuthorNames[authorId] = "Unknown user";
             newAuthorRoles[authorId] = "Unknown Role";
@@ -134,10 +133,8 @@ const Announcement = () => {
         }
       }
       // Update the author names map, merging with existing names
-      setAuthorNameMap(prevMap => ({ ...prevMap, ...newAuthorNames }));
-      setAuthorRoleMap(prevMap => ({ ...prevMap, ...newAuthorRoles }));
-
-
+      setAuthorNameMap((prevMap) => ({ ...prevMap, ...newAuthorNames }));
+      setAuthorRoleMap((prevMap) => ({ ...prevMap, ...newAuthorRoles }));
     } catch (error) {
       console.error("Failed to fetch announcements:", error);
       toast.error("Failed to fetch announcements. Please make sure you are logged in.");
@@ -151,7 +148,7 @@ const Announcement = () => {
   }, [loading, authorNamesMap, authorRoleMap]);
 
   if (loading) {
-    return <div className="text-center py-8">Loading...</div>
+    return <div className="text-center py-8">Loading...</div>;
   }
 
   return (
@@ -175,12 +172,12 @@ const Announcement = () => {
                   </label>
                   {field.type === "checkbox" ? (
                     <div className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id={field.name} 
-                        name={field.name} 
-                        checked={newAnnouncement[field.name]} 
-                        onChange={handleInputChange} 
+                      <input
+                        type="checkbox"
+                        id={field.name}
+                        name={field.name}
+                        checked={newAnnouncement[field.name]}
+                        onChange={handleInputChange}
                         className="h-4 w-4 text-blue-600 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!currentUserId}
                       />
@@ -225,7 +222,7 @@ const Announcement = () => {
                 )}
 
                 <span className="text-sm text-gray-500">
-                  By: {authorRoleMap[announcement.author] && `${authorRoleMap[announcement.author]}`} {authorNamesMap[announcement.author] || 'Loading...'}
+                  By: {authorRoleMap[announcement.author] && `${authorRoleMap[announcement.author]}`} {authorNamesMap[announcement.author] || "Loading..."}
                 </span>
                 <span
                   className="text-sm text-gray-500"
@@ -236,15 +233,15 @@ const Announcement = () => {
                   {new Date(announcement.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" })}
                 </span>
                 {(announcement.author === currentUserId || isAdmin) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenDeleteModal(announcement._id);
-                  }}
-                  className="text-sm text-red-500 hover:text-red-700"
-                >
-                  Delete
-                </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDeleteModal(announcement._id);
+                    }}
+                    className="text-sm text-red-500 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
                 )}
               </div>
             </div>

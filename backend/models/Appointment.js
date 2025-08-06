@@ -1,29 +1,29 @@
-const mongoose = require('mongoose');
-const { initialCheckupSchema } = require('./Patient');
+const mongoose = require("mongoose");
+const { initialCheckupSchema } = require("./Patient");
 
-const appointmentSchema = new mongoose.Schema({
-    patient: {
-        type: String,
-        required: true
-    },
+const appointmentSchema = new mongoose.Schema(
+  {
+    patient: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
     doctor: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     dateTime: {
-        type: Date,
-        required: true
+      type: Date,
+      required: true,
     },
     notes: {
-        type: String,
-        default: ''
+      type: String,
+      default: "",
     },
     checkups: {
-        type: [initialCheckupSchema],
-        default: [],
+      type: [initialCheckupSchema],
+      default: [],
     },
-}, {
-    timestamps: true // Automatically adds createdAt and updatedAt
-});
+  },
+  {
+    timestamps: true, // Automatically adds createdAt and updatedAt
+  }
+);
 
-module.exports = mongoose.model('Appointment', appointmentSchema);
+module.exports = mongoose.model("Appointment", appointmentSchema);

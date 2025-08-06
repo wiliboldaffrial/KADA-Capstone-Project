@@ -7,7 +7,7 @@ router.get("/", async (req, res) => {
   try {
     // MODIFICATION: Add .populate('patientId') to link to the patient document
     const appointments = await Appointment.find()
-      .populate("patientId", "name") // Fetches the Patient's ID and name
+      // .populate("patientId", "name") // Fetches the Patient's ID and name
       .sort({ dateTime: 1 });
     res.json(appointments);
   } catch (error) {
@@ -33,7 +33,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// POST a new appointment checkup (used by nurse)
 router.post("/:id/checkups", async (req, res) => {
   const { id } = req.params;
   const checkupData = req.body;
@@ -51,31 +50,34 @@ router.post("/:id/checkups", async (req, res) => {
     await appointment.save();
     console.log("✅ Checkup saved to Appointment");
 
-    // // 3. Save checkup to Patient
-    // const patient = await Patient.findById(appointment.patientId);
-    // if (patient) {
-    //   patient.checkups.push(checkupData);
-    //   await patient.save();
-    //   console.log("✅ Checkup saved to Patient");
-    // } else {
-    //   console.warn("⚠️ Patient not found for appointment");
-    // }
-
-    // 4. Save to Checkup collection with initialCheckup field
+    // 3. Save to Checkup collection with correct patientId
     const checkupEntry = new Checkup({
-      patientId: appointment.patientId,
+      patientId: appointment.patient, // <-- FIXED LINE
       initialCheckup: checkupData,
-      aiResponse: checkupData.aiResponse || {}, // Optional
+      aiResponse: checkupData.aiResponse || {},
     });
 
     await checkupEntry.save();
     console.log("✅ Checkup saved to Checkup collection");
 
-    // 5. Return the newly saved checkupData
+    // 4. Return the newly saved checkupData
     res.status(201).json(checkupData);
   } catch (error) {
     console.error("❌ Error saving checkup:", error.message);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Reset initial checkup for an appointment
+router.post("/:id/checkups/reset", async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    appointment.checkups = [];
+    await appointment.save();
+    res.json({ message: "Initial checkup reset" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
