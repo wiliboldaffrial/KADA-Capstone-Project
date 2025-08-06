@@ -5,11 +5,20 @@ const Checkup = require("../models/Checkup");
 
 router.get("/", async (req, res) => {
   try {
-    // MODIFICATION: Add .populate('patientId') to link to the patient document
+    // Populate both patient and doctor references
     const appointments = await Appointment.find()
-      // .populate("patientId", "name") // Fetches the Patient's ID and name
+      .populate("patient", "name nik") // Populate patient with name and nik
+      .populate("doctor", "name") // Populate doctor with name
       .sort({ dateTime: 1 });
-    res.json(appointments);
+    
+    // Transform the data to include the names directly for frontend compatibility
+    const transformedAppointments = appointments.map(appointment => ({
+      ...appointment.toObject(),
+      patientName: appointment.patient ? appointment.patient.name : 'Unknown Patient',
+      doctorName: appointment.doctor ? appointment.doctor.name : 'Unknown Doctor'
+    }));
+    
+    res.json(transformedAppointments);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -26,7 +35,13 @@ router.post("/", async (req, res) => {
 
     const newAppointment = new Appointment({ patient, doctor, dateTime, notes });
     await newAppointment.save();
-    res.status(201).json(newAppointment);
+    
+    // Populate the created appointment before sending response
+    const populatedAppointment = await Appointment.findById(newAppointment._id)
+      .populate("patient", "name nik")
+      .populate("doctor", "name");
+    
+    res.status(201).json(populatedAppointment);
   } catch (error) {
     console.error("Failed to create appointment:", error);
     res.status(500).json({ message: "Server error" });
@@ -84,7 +99,9 @@ router.post("/:id/checkups/reset", async (req, res) => {
 // PUT to update an appointment
 router.put("/:id", async (req, res) => {
   try {
-    const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+      .populate("patient", "name nik")
+      .populate("doctor", "name");
     if (!updatedAppointment) {
       return res.status(404).json({ message: "Appointment not found" });
     }
