@@ -5,12 +5,14 @@ import PatientBarChart from "../components/PatientBarMonth";
 import axios from "axios";
 import { format, isToday, startOfWeek, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval } from "date-fns";
 import { toast } from "react-hot-toast";
+import { useUser } from "../UserContext";
 
 // Define API URLs
 const PATIENTS_API_URL = "http://localhost:5000/api/patients";
 const APPOINTMENTS_API_URL = "http://localhost:5000/api/appointments";
 const ANNOUNCEMENTS_API_URL = "http://localhost:5000/api/announcements";
 const ROOMS_API_URL = "http://localhost:5000/api/rooms";
+const USERS_API_URL = "http://localhost:5000/api/users";
 
 const Dashboard = () => {
   console.log("Dashboard component is rendering.");
@@ -26,6 +28,9 @@ const Dashboard = () => {
   const [latestAnnouncement, setLatestAnnouncement] = useState(null);
   const [weeklyPatientData, setWeeklyPatientData] = useState([]);
   const [monthlyPatientData, setMonthlyPatientData] = useState([]);
+
+  const [authorNameMap, setAuthorNameMap] = useState([]);
+  const [authorRoleMap, setAuthorRoleMap] = useState([]);
 
   const sortedAppointments = [...todaysAppointments].sort((a, b) => {
     const now = new Date();
@@ -58,7 +63,34 @@ const Dashboard = () => {
         setPatientCount(todayApps.length);
 
         if (announcementRes.data.length > 0) {
-          setLatestAnnouncement(announcementRes.data[0]);
+          const latest = announcementRes.data[0];
+          setLatestAnnouncement(latest);
+
+          if (latest.author && !authorNameMap[latest.author]) {
+            try {
+              const userRes = await axios.get(`${USERS_API_URL}/${latest.author}`, getAuthHeaders());
+              if (userRes.data) {
+                setAuthorNameMap(prevMap => ({...prevMap, [latest.author]: userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1)}));
+                let roleToDisplay = userRes.data.role;
+                if (roleToDisplay && roleToDisplay.toLowerCase() === 'admin/receptionist') {
+                  roleToDisplay = 'Admin';
+                } else if (roleToDisplay) {
+                  roleToDisplay = roleToDisplay.charAt(0).toUpperCase() + roleToDisplay.slice(1)
+                } else {
+                  roleToDisplay = "Unknown Role";
+                }
+                setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: roleToDisplay }));
+              } else {
+                setAuthorNameMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown User" }));
+                setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown Role" }));
+              }
+            } catch (userError) {
+              console.error(`Failed to fetch user data for ID ${latest.author}:`, userError);
+              setAuthorNameMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown User" }));
+              setAuthorRoleMap(prevMap => ({ ...prevMap, [latest.author]: "Unknown Role" }));
+            }
+          }
+
         }
         const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
         setAvailableRooms(availableCount);
@@ -110,7 +142,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [authorNameMap]);
 
   return (
     <>
@@ -119,7 +151,10 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <p>
               <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
-              <span className="text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
+              {latestAnnouncement.author && (
+                <span className="text-sm text-gray-500">{authorRoleMap[latestAnnouncement.author] && `${authorRoleMap[latestAnnouncement.author]}`} {authorNameMap[latestAnnouncement.author] || 'Loading...'}:</span>
+              )}
+              <span className="text-sm text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
             </p>
             <div className="flex items-center flex-shrink-0 ml-4">
               <span className="text-sm text-gray-500 pr-3">{format(new Date(latestAnnouncement.createdAt), "p")}</span>
