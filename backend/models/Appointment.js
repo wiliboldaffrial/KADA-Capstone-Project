@@ -1,10 +1,16 @@
-const mongoose = require("mongoose");
-const { initialCheckupSchema } = require("./Patient");
+const mongoose = require('mongoose');
+const initialCheckupSchema = require('./initialCheckup');
 
 const appointmentSchema = new mongoose.Schema(
   {
-    patient: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
-    doctor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Changed to ObjectId reference
+    patient: { 
+        type: String,
+        required: true },
+    // patient: { type: mongoose.Schema.Types.ObjectId, ref: "Patient", required: true },
+    doctor: {
+      type: String,
+      required: true,
+    },
     dateTime: {
       type: Date,
       required: true,

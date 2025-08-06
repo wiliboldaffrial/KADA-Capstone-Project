@@ -14,6 +14,4 @@ const patientSchema = new mongoose.Schema({
   checkups: [initialCheckupSchema] // Array of checkups 
 }, { timestamps: true }); // `timestamps` adds createdAt and updatedAt fields
 
-module.exports = {
-  Patient: mongoose.model('Patient', patientSchema)
-};
+module.exports = mongoose.model('Patient', patientSchema);
