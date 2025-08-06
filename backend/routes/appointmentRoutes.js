@@ -9,6 +9,8 @@ router.get("/", async (req, res) => {
     // Populate both patient and doctor references
     const appointments = await Appointment.find()
       // .populate("patientId", "name") // Fetches the Patient's ID and name\
+
+      .populate("doctor", "name") // Populate doctor with name
       .sort({ dateTime: 1 });
     
     // Transform the data to include the names directly for frontend compatibility
