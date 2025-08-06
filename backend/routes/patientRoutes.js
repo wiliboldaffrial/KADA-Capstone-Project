@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { Patient } = require("../models/Patient");
+const Patient = require("../models/Patient");
 const Checkup = require("../models/Checkup"); // Import the separate Checkup model
 
 // Get all patients
@@ -14,23 +14,23 @@ router.get("/", async (req, res) => {
 });
 
 // Add new checkup (used by nurse) - EMBEDDED checkup in patient document
-router.post("/:id/checkup", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const newCheckup = req.body;
+// router.post("/:id/checkup", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const newCheckup = req.body;
 
-    const patient = await Patient.findById(id);
-    if (!patient) return res.status(404).json({ error: "Patient not found" });
+//     const patient = await Patient.findById(id);
+//     if (!patient) return res.status(404).json({ error: "Patient not found" });
 
-    // Add to embedded checkups array
-    patient.checkups.push(newCheckup);
-    await patient.save();
+//     // Add to embedded checkups array
+//     patient.checkups.push(newCheckup);
+//     await patient.save();
 
-    res.status(200).json(patient);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+//     res.status(200).json(patient);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
 // Get a single patient by id
 router.get("/:id", async (req, res) => {

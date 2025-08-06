@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const initialCheckupSchema = require('./initialCheckup');
+// const initialCheckupSchema = require('./initialCheckup');
 
 const checkupSchema = new mongoose.Schema({
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
