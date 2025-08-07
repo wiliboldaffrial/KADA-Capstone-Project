@@ -5,7 +5,7 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
-const API_URL = "http://localhost:5000/api/patients";
+const API_URL = `${process.env.REACT_APP_API_URL}/api/patients`;
 
 const PatientManagement = () => {
   const [patients, setPatients] = useState([]);

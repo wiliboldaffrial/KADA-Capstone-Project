@@ -22,7 +22,7 @@ const LoginForm = () => {
     setError("");
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ const LoginForm = () => {
       const data = await response.json();
 
       if (response.ok) {
-      
+
         localStorage.setItem('token', data.token);
         localStorage.setItem('userRole', data.user.role);
         localStorage.setItem('userName', data.user.name);
@@ -65,24 +65,24 @@ const LoginForm = () => {
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
               <div>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email" 
-                  className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] border-gray-400" 
-                  style={{ fontFamily: "Kollektif, sans-serif" }} 
+                  placeholder="Email"
+                  className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] border-gray-400"
+                  style={{ fontFamily: "Kollektif, sans-serif" }}
                   required
                 />
               </div>
               <div>
-                <input 
+                <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="Password" 
-                  className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] border-gray-400" 
-                  style={{ fontFamily: "Kollektif, sans-serif" }} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#045ae2] border-gray-400"
+                  style={{ fontFamily: "Kollektif, sans-serif" }}
                   required
                 />
               </div>

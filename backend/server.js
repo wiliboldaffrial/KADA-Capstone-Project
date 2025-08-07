@@ -25,7 +25,6 @@ const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 
-
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", passport.authenticate("jwt", { session: false }), patientRoutes);
 app.use("/api/checkups", passport.authenticate("jwt", { session: false }), checkupRoutes);

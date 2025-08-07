@@ -1,5 +1,3 @@
-// src/components/ConfirmationModal.jsx
-
 import React from "react";
 import { AlertTriangle } from "lucide-react";
 

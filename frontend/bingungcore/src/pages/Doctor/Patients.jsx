@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Filter, ArrowUpDown, Eye, Edit, Trash2, Plus, User, Calendar, Phone, MapPin, MoreVertical, ChevronLeft, ChevronRight, Users, ChevronDown, ChevronUp, FileText, Activity } from "lucide-react";
+import { Search, Filter, ArrowUpDown, Eye, Trash2, User, Calendar, Phone, MapPin, MoreVertical, ChevronLeft, ChevronRight, Users, ChevronDown, ChevronUp, FileText, Activity } from "lucide-react";
 import SideBar from "../../components/SideBar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -313,7 +313,6 @@ const PatientPage = () => {
   // NEW: Expanded Patient Details Component
   const ExpandedPatientDetails = ({ patient }) => {
     const checkups = patientCheckups[patient._id] || [];
-    const appointments = patientAppointments[patient._id] || [];
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 pt-4 border-t border-gray-200">
@@ -387,33 +386,6 @@ const PatientPage = () => {
             )}
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h5 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Appointments ({appointments.length})
-            </h5>
-            {appointments.length > 0 ? (
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {appointments.slice(0, 3).map((appointment) => (
-                  <div key={appointment._id} className="bg-white p-2 rounded border text-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">Dr. {appointment.doctor}</p>
-                        <p className="text-gray-600 text-xs">{format(new Date(appointment.dateTime), "MMM dd, yyyy HH:mm")}</p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs rounded-full ${appointment.status === "completed" ? "bg-green-100 text-green-800" : appointment.status === "cancelled" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
-                        {appointment.status || "scheduled"}
-                      </span>
-                    </div>
-                    {appointment.notes && <p className="text-gray-600 text-xs mt-1 truncate">{appointment.notes}</p>}
-                  </div>
-                ))}
-                {appointments.length > 3 && <p className="text-xs text-gray-500 text-center">+{appointments.length - 3} more appointments</p>}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">No appointments scheduled</p>
-            )}
-          </div>
         </div>
       </div>
     );
