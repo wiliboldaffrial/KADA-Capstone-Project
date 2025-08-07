@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
-// const initialCheckupSchema = require('./initialCheckup');
 
 const checkupSchema = new mongoose.Schema({
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
     date: { type: Date, default: Date.now },
     type: { type: String, default: 'General' },
-    
+
     // New fields for enhanced checkups
     symptoms: String,
     vitalSigns: {
@@ -17,7 +16,16 @@ const checkupSchema = new mongoose.Schema({
     },
     details: String,
     doctorNotes: String,
-    
+
+    // Store original nurse initial checkup data (if converted from nurse checkup)
+    nurseInitialData: {
+        weight: Number,
+        bloodPressure: String,
+        temperature: Number,
+        notes: String,
+        convertedAt: Date
+    },
+
     // Enhanced AI response structure
     aiResponse: {
         possibleDiagnoses: [String],
