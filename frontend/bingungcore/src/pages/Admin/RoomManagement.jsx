@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import { BedDouble, DoorOpen, DoorClosed, CheckCircle, XCircle } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api/rooms";
+const API_URL = `${process.env.REACT_APP_API_URL}/api/rooms`;
 
 const RoomManagement = () => {
   const [rooms, setRooms] = useState([]);

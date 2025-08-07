@@ -6,8 +6,8 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import { useUser } from "../UserContext";
 import { Megaphone, Plus, Calendar, AlertTriangle, Trash2, ChevronDown, Check } from "lucide-react";
 
-const API_URL = "http://localhost:5000/api/announcements";
-const USERS_API_URL = "http://localhost:5000/api/users";
+const API_URL = `${process.env.REACT_APP_API_URL}/api/announcements`;
+const USERS_API_URL = `${process.env.REACT_APP_API_URL}/api/users`;
 
 const Announcement = () => {
   const [announcements, setAnnouncements] = useState([]);
