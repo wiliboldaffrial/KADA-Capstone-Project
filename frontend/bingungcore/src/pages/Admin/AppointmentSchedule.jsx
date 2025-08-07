@@ -182,7 +182,7 @@ const AppointmentSchedule = () => {
       setSearchTerm(e.target.value);
       // Clear the selected patient ID when user types
       const syntheticEvent = { target: { name: "patient", value: "" } };
-      onChange(syntheticEvent);
+      // onChange(syntheticEvent);
       setDropdownOpen(true);
     };
 

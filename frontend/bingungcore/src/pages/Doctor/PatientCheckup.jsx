@@ -730,7 +730,7 @@ const PatientCheckup = () => {
                         }`}
                       >
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="min-w-0">
                             <p className="font-medium text-gray-900">
                               {formatDate(checkup.date)}
                             </p>
@@ -738,16 +738,16 @@ const PatientCheckup = () => {
                               {checkup.type || "General"} Checkup
                             </p>
                             {checkup.symptoms && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">
+                              <p className="text-xs text-gray-500 mt-1 break-words">
                                 {checkup.symptoms.substring(0, 50)}...
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             <p className="text-xs text-gray-500">
                               {formatDateTime(checkup.createdAt || checkup.date)}
                             </p>
-                            <div className="flex items-center gap-1 mt-1">
+                            <div className="flex items-center gap-1 mt-1 justify-end">
                               {checkup.doctorNotes && (
                                 <div className="flex items-center gap-1">
                                   <Stethoscope className="w-3 h-3 text-blue-500" />
