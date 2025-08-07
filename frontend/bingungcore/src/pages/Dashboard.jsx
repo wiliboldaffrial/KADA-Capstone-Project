@@ -188,8 +188,8 @@ const Dashboard = () => {
                 sortedAppointments.map((appt) => (
                   <li key={appt._id} className="py-2 flex justify-between items-center">
                     <div>
-                      <p>{appt.patient}</p>
-                      <p className="text-xs text-gray-500">{appt.doctor}</p>
+                      <p>{appt.patient?.name || 'Unknown Patient'}</p>
+                      <p className="text-xs text-gray-500">{format(new Date(appt.dateTime), 'p')} with {appt.doctor?.name || 'Unknown Doctor'}</p>
                     </div>
                     <span className="text-sm text-blue-600">{new Date() > new Date(appt.dateTime) ? "Finished" : format(new Date(appt.dateTime), "h:mm a")}</span>
                   </li>
