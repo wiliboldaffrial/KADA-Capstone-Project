@@ -1,50 +1,76 @@
 import React, { useState, useEffect } from "react";
+
 // Removed: import SideBar from "../components/SideBar";
+
 import PatientChartDay from "../components/PatientChartDay";
+
 import PatientBarChart from "../components/PatientBarMonth";
+
 import axios from "axios";
+
 import { format, isToday, startOfWeek, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval } from "date-fns";
+
 import { toast } from "react-hot-toast";
+
 import { useUser } from "../UserContext";
 
 // Define API URLs
+
 const PATIENTS_API_URL = "http://localhost:5000/api/patients";
+
 const APPOINTMENTS_API_URL = "http://localhost:5000/api/appointments";
+
 const ANNOUNCEMENTS_API_URL = "http://localhost:5000/api/announcements";
+
 const ROOMS_API_URL = "http://localhost:5000/api/rooms";
+
 const USERS_API_URL = "http://localhost:5000/api/users";
 
 const Dashboard = () => {
   console.log("Dashboard component is rendering.");
 
   // Removed: isSidebarCollapsed and toggleSideBar
+
   // const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   // const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   // NEW: State for dynamic dashboard data
+
   const [patientCount, setPatientCount] = useState(0);
+
   const [availableRooms, setAvailableRooms] = useState(0);
+
   const [todaysAppointments, setTodaysAppointments] = useState([]);
+
   const [latestAnnouncement, setLatestAnnouncement] = useState(null);
+
   const [weeklyPatientData, setWeeklyPatientData] = useState([]);
+
   const [monthlyPatientData, setMonthlyPatientData] = useState([]);
 
   const [authorNameMap, setAuthorNameMap] = useState([]);
+
   const [authorRoleMap, setAuthorRoleMap] = useState([]);
 
   const sortedAppointments = [...todaysAppointments].sort((a, b) => {
     const now = new Date();
+
     const aIsPast = new Date(a.dateTime) < now;
+
     const bIsPast = new Date(b.dateTime) < now;
 
     if (aIsPast && !bIsPast) return 1;
+
     if (!aIsPast && bIsPast) return -1;
+
     return new Date(a.dateTime) - new Date(b.dateTime);
   });
 
   useEffect(() => {
     const getAuthHeaders = () => {
       const token = localStorage.getItem("token");
+
       return { headers: { Authorization: `Bearer ${token}` } };
     };
 
@@ -52,18 +78,25 @@ const Dashboard = () => {
       try {
         const [patientRes, appointmentRes, announcementRes, roomRes] = await Promise.all([
           axios.get(PATIENTS_API_URL, getAuthHeaders()),
+
           axios.get(APPOINTMENTS_API_URL, getAuthHeaders()),
+
           axios.get(ANNOUNCEMENTS_API_URL, getAuthHeaders()),
+
           axios.get(ROOMS_API_URL, getAuthHeaders()),
         ]);
 
         setPatientCount(patientRes.data.length);
+
         const todayApps = appointmentRes.data.filter((app) => isToday(new Date(app.dateTime)));
+
         setTodaysAppointments(todayApps);
+
         setPatientCount(todayApps.length);
 
         if (announcementRes.data.length > 0) {
           const latest = announcementRes.data[0];
+
           setLatestAnnouncement(latest);
 
           if (
@@ -75,9 +108,12 @@ const Dashboard = () => {
           ) {
             try {
               const userRes = await axios.get(`${USERS_API_URL}/${latest.author}`, getAuthHeaders());
+
               if (userRes.data) {
                 setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1) }));
+
                 let roleToDisplay = userRes.data.role;
+
                 if (roleToDisplay && roleToDisplay.toLowerCase() === "admin/receptionist") {
                   roleToDisplay = "Admin";
                 } else if (roleToDisplay) {
@@ -85,56 +121,75 @@ const Dashboard = () => {
                 } else {
                   roleToDisplay = "Unknown Role";
                 }
+
                 setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: roleToDisplay }));
               } else {
                 setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown User" }));
+
                 setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown Role" }));
               }
             } catch (userError) {
               console.error(`Failed to fetch user data for ID ${latest.author}:`, userError);
+
               setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown User" }));
+
               setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown Role" }));
             }
           }
         }
+
         const availableCount = roomRes.data.filter((room) => room.status === "Available").length;
+
         setAvailableRooms(availableCount);
 
         // Process appointments to get weekly data patient
+
         const now = new Date();
+
         const startOfLast7Days = subDays(now, 6); // Calculate the date 6 days ago
+
         const startof6MonthsAgo = subMonths(now, 5);
 
         const days = eachDayOfInterval({
           start: startOfLast7Days,
+
           end: now,
         });
 
         const months = eachMonthOfInterval({
           start: startof6MonthsAgo,
+
           end: now,
         });
 
         // Map over days and count appointments for each day
+
         const counts = days.map((day) => {
           const count = appointmentRes.data.filter((app) => format(new Date(app.dateTime), "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).length;
+
           return {
             day: format(day, "E"), // E returns Mon, Tue, etc
+
             patients: count,
           };
         });
+
         setWeeklyPatientData(counts);
 
         const monthLyCounts = months.map((month) => {
           const count = appointmentRes.data.filter((app) => format(new Date(app.dateTime), "yyyy-MM") === format(month, "yyyy-MM")).length;
+
           return {
             month: format(month, "MMM"),
+
             patients: count,
           };
         });
+
         setMonthlyPatientData(monthLyCounts);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
+
         toast.error("Could not load dashboard data. Please log in.");
       }
     };
@@ -149,15 +204,19 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <p>
               <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
+
               {latestAnnouncement.author && (
                 <span className="text-sm text-gray-500">
                   {authorRoleMap[latestAnnouncement.author] && `${authorRoleMap[latestAnnouncement.author]}`} {authorNameMap[latestAnnouncement.author] || "Loading..."}:
                 </span>
               )}
+
               <span className="text-sm text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
             </p>
+
             <div className="flex items-center flex-shrink-0 ml-4">
               <span className="text-sm text-gray-500 pr-3">{format(new Date(latestAnnouncement.createdAt), "p")}</span>
+
               <span className="w-3 h-3 bg-green-500 rounded-full"></span>
             </div>
           </div>
@@ -169,28 +228,38 @@ const Dashboard = () => {
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="bg-white shadow rounded-md p-4 text-center">
               <h2 className="text-2xl font-bold">{patientCount}</h2>
+
               <p className="text-gray-600">Total Patients</p>
             </div>
+
             <div className="bg-white shadow rounded-md p-4 text-center">
               <h2 className="text-2xl font-bold">13</h2>
+
               <p className="text-gray-600">Doctors</p>
             </div>
+
             <div className="bg-white shadow rounded-md p-4 text-center">
               <h2 className="text-2xl font-bold">{availableRooms}</h2>
+
               <p className="text-gray-600">Rooms Available</p>
             </div>
           </div>
 
           <div className="col-span-1 bg-white shadow rounded-md p-4">
             <h3 className="font-semibold text-lg mb-4">Today's Appointments</h3>
+
             <ul className="divide-y">
               {sortedAppointments.length > 0 ? (
                 sortedAppointments.map((appt) => (
                   <li key={appt._id} className="py-2 flex justify-between items-center">
                     <div>
-                      <p>{appt.patient?.name || 'Unknown Patient'}</p>
-                      <p className="text-xs text-gray-500">{format(new Date(appt.dateTime), 'p')} with {appt.doctor?.name || 'Unknown Doctor'}</p>
+                      <p>{appt.patient?.name || "Unknown Patient"}</p>
+
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(appt.dateTime), "p")} with {appt.doctor?.name || "Unknown Doctor"}
+                      </p>
                     </div>
+
                     <span className="text-sm text-blue-600">{new Date() > new Date(appt.dateTime) ? "Finished" : format(new Date(appt.dateTime), "h:mm a")}</span>
                   </li>
                 ))
@@ -200,15 +269,19 @@ const Dashboard = () => {
             </ul>
           </div>
         </div>
+
         <div className="grid grid-cols-1 gap-4">
           <div className="bg-blue-600 text-white rounded-md p-4">
             <h4 className="font-semibold mb-2">Patient per Day</h4>
+
             <div className="h-40 flex items-center justify-center text-sm">
               <PatientChartDay data={weeklyPatientData} />
             </div>
           </div>
+
           <div className="bg-white rounded-md shadow p-4">
             <h4 className="font-semibold mb-2">Patient per Month</h4>
+
             <div className="h-40 flex items-center justify-center text-sm">
               <PatientBarChart data={monthlyPatientData} />
             </div>
