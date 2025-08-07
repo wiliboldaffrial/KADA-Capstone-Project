@@ -50,7 +50,7 @@ const PatientList = () => {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [nurseName, setNurseName] = useState("");
-  const initialFormState = { weight: "", bloodPressure: "", temperature: "", notes: "" };
+  const initialFormState = { height: "", weight: "", bloodPressure: "", temperature: "", notes: "" };
   const [initialCheckupForm, setInitialCheckupForm] = useState(initialFormState);
   const [doctorHistory, setDoctorHistory] = useState([]);
   const [activeDoctorCheckup, setActiveDoctorCheckup] = useState(null);
@@ -237,6 +237,7 @@ const PatientList = () => {
                         <h3 className="font-bold text-lg mb-4">Initial Checkup</h3>
                         <form onSubmit={handleAddInitialCheckup} className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input name="height" value={initialCheckupForm.height || ""} onChange={handleFormChange} placeholder="Height (cm)" className="p-2 border rounded-md w-full" />
                             <input name="weight" value={initialCheckupForm.weight || ""} onChange={handleFormChange} placeholder="Weight (kg)" className="p-2 border rounded-md w-full" />
                             <input name="bloodPressure" value={initialCheckupForm.bloodPressure || ""} onChange={handleFormChange} placeholder="Blood Pressure" className="p-2 border rounded-md w-full" />
                             <input name="temperature" value={initialCheckupForm.temperature || ""} onChange={handleFormChange} placeholder="Temperature (°C)" className="p-2 border rounded-md w-full" />

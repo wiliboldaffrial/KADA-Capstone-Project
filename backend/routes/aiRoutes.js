@@ -6,14 +6,26 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 // AI Medical Analysis endpoint
+// Enhanced AI analysis endpoint in aiRoutes.js
+// Replace the existing /analyze-checkup route with this improved version:
+
 router.post('/analyze-checkup', async (req, res) => {
     try {
         const { patientInfo, checkupDetails, symptoms, vitalSigns, doctorNotes } = req.body;
 
-        // Validate required data
-        if (!checkupDetails && !symptoms && !doctorNotes) {
-            return res.status(400).json({ 
-                message: 'Insufficient data for analysis. Please provide checkup details, symptoms, or doctor notes.' 
+        // Enhanced validation for imported nurse data
+        const hasCheckupDetails = checkupDetails && checkupDetails.trim() &&
+            checkupDetails !== "No physical examination details provided";
+        const hasSymptoms = symptoms && symptoms.trim() &&
+            symptoms !== "No symptoms recorded";
+        const hasDoctorNotes = doctorNotes && doctorNotes.trim() &&
+            !doctorNotes.includes("No doctor diagnosis yet");
+        const hasVitalSigns = vitalSigns && Object.values(vitalSigns).some(v => v && v.trim());
+
+        // More lenient validation - accept if we have ANY meaningful data
+        if (!hasCheckupDetails && !hasSymptoms && !hasDoctorNotes && !hasVitalSigns) {
+            return res.status(400).json({
+                message: 'Insufficient data for analysis. Please provide at least some checkup details, symptoms, vital signs, or doctor notes.'
             });
         }
 
@@ -26,53 +38,57 @@ router.post('/analyze-checkup', async (req, res) => {
             });
         }
 
-        console.log('Starting AI analysis with data:', {
+        console.log('Starting AI analysis with enhanced data validation:', {
             patientAge: patientInfo?.age,
-            hasSymptoms: !!symptoms,
-            hasCheckupDetails: !!checkupDetails,
-            hasDoctorNotes: !!doctorNotes,
-            hasVitalSigns: !!vitalSigns
+            hasSymptoms: hasSymptoms,
+            hasCheckupDetails: hasCheckupDetails,
+            hasDoctorNotes: hasDoctorNotes,
+            hasVitalSigns: hasVitalSigns,
+            isImportedFromNurse: symptoms?.includes("Nurse Initial Assessment")
         });
 
         // Get the generative model
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Construct the medical analysis prompt
-        const prompt = `You are a medical AI assistant. Analyze this patient case and respond with ONLY valid JSON (no markdown, no additional text).
+        // Enhanced prompt for imported nurse data
+        const prompt = `You are a medical AI assistant analyzing patient data. This may include initial assessment by a nurse that was imported for doctor review. Analyze this case and respond with ONLY valid JSON (no markdown, no additional text).
 
 PATIENT: Age ${patientInfo?.age || 'Unknown'}, Gender: ${patientInfo?.gender || 'Unknown'}
 MEDICAL HISTORY: ${patientInfo?.medicalHistory || 'None provided'}
 
-${symptoms ? `SYMPTOMS: ${symptoms}` : ''}
-${checkupDetails ? `EXAMINATION: ${checkupDetails}` : ''}
-${doctorNotes ? `DOCTOR NOTES: ${doctorNotes}` : ''}
+${symptoms ? `SYMPTOMS/COMPLAINTS: ${symptoms}` : ''}
+${checkupDetails && hasCheckupDetails ? `PHYSICAL EXAMINATION: ${checkupDetails}` : ''}
+${doctorNotes && hasDoctorNotes ? `DOCTOR NOTES: ${doctorNotes}` : ''}
 
-${vitalSigns && Object.values(vitalSigns).some(v => v) ? `VITAL SIGNS:
+${hasVitalSigns ? `VITAL SIGNS:
 ${vitalSigns.temperature ? `Temperature: ${vitalSigns.temperature}°C` : ''}
-${vitalSigns.bloodPressure ? `BP: ${vitalSigns.bloodPressure}` : ''}
-${vitalSigns.heartRate ? `HR: ${vitalSigns.heartRate} bpm` : ''}
+${vitalSigns.bloodPressure ? `Blood Pressure: ${vitalSigns.bloodPressure}` : ''}
+${vitalSigns.heartRate ? `Heart Rate: ${vitalSigns.heartRate} bpm` : ''}
 ${vitalSigns.weight ? `Weight: ${vitalSigns.weight} kg` : ''}
-${vitalSigns.height ? `Height: ${vitalSigns.height} cm` : ''}` : ''}
+${vitalSigns.height ? `Height: ${vitalSigns.height} cm` : ''}` : 'No vital signs recorded'}
+
+${symptoms?.includes("Nurse Initial Assessment") ? `
+
+NOTE: This analysis includes initial assessment data from nursing staff. Please provide preliminary diagnostic considerations that can help guide the doctor's examination and final diagnosis.` : ''}
 
 Respond with ONLY this JSON structure (no markdown formatting):
 {
-  "possibleDiagnoses": ["diagnosis 1", "diagnosis 2", "diagnosis 3"],
-  "recommendedActions": "specific medical actions and tests to consider",
-  "riskFactors": ["risk factor 1", "risk factor 2"],
-  "followUpRecommendations": "follow-up care recommendations",
+  "possibleDiagnoses": ["most likely diagnosis", "alternative diagnosis", "differential diagnosis"],
+  "recommendedActions": "specific medical actions, tests, and examinations to consider",
+  "riskFactors": ["relevant risk factor 1", "risk factor 2"],
+  "followUpRecommendations": "follow-up care and monitoring recommendations",
   "confidence": 75,
-  "confidenceExplanation": "explanation of confidence level",
-  "additionalConsiderations": "additional medical considerations"
+  "confidenceExplanation": "explanation of confidence level and data limitations",
+  "additionalConsiderations": "additional medical considerations and red flags to watch for"
 }`;
 
-        console.log('Sending request to Gemini AI...');
+        console.log('Sending request to Gemini AI with enhanced prompt...');
 
-        // Generate AI response - use simple configuration to avoid safety setting issues
+        // Generate AI response
         const result = await model.generateContent(prompt);
-
         const response = await result.response;
         let text = response.text();
-        
+
         console.log('Raw AI response received:', text?.substring(0, 200) + '...');
 
         if (!text) {
@@ -81,16 +97,13 @@ Respond with ONLY this JSON structure (no markdown formatting):
 
         // Clean the response text more thoroughly
         text = text.trim();
-        
-        // Log the raw response for debugging
-        console.log('Raw response before cleaning:', JSON.stringify(text.substring(0, 300)));
-        
+
         // Remove markdown code blocks if present (case insensitive)
         text = text.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '');
-        
+
         // Remove any extra whitespace, newlines at start/end
         text = text.replace(/^\s+|\s+$/g, '');
-        
+
         // Ensure we have the JSON object boundaries
         if (!text.startsWith('{')) {
             const startIndex = text.indexOf('{');
@@ -98,7 +111,7 @@ Respond with ONLY this JSON structure (no markdown formatting):
                 text = text.substring(startIndex);
             }
         }
-        
+
         if (!text.endsWith('}')) {
             const endIndex = text.lastIndexOf('}');
             if (endIndex !== -1) {
@@ -106,8 +119,8 @@ Respond with ONLY this JSON structure (no markdown formatting):
             }
         }
 
-        console.log('Cleaned response:', JSON.stringify(text.substring(0, 200)));
-        
+        console.log('Cleaned response for parsing...');
+
         if (!text || text.length < 2) {
             throw new Error('Empty or invalid response after cleaning');
         }
@@ -116,89 +129,75 @@ Respond with ONLY this JSON structure (no markdown formatting):
         try {
             // Try to parse the JSON response directly first
             aiAnalysis = JSON.parse(text);
-            console.log('Successfully parsed AI response directly');
+            console.log('Successfully parsed AI response for imported data');
         } catch (parseError) {
-            console.error('Direct JSON parsing failed:', parseError.message);
-            console.log('Attempting to extract JSON from markdown-formatted response...');
-            
-            // Try to extract JSON from markdown code blocks
-            let jsonText = text;
-            
-            // Remove markdown code blocks
-            jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '');
-            
-            // Try to find JSON object in the text
-            const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+            console.error('JSON parsing failed for imported data:', parseError.message);
+
+            // Try to extract JSON from the response
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 try {
                     aiAnalysis = JSON.parse(jsonMatch[0]);
-                    console.log('Successfully extracted and parsed JSON from markdown');
+                    console.log('Successfully extracted and parsed JSON');
                 } catch (extractError) {
-                    console.error('JSON extraction also failed:', extractError.message);
-                    console.error('Extracted text was:', jsonMatch[0]);
-                    
-                    // Last resort: try to clean up common issues
-                    let cleanedJson = jsonMatch[0];
-                    
-                    // Fix common JSON issues
-                    cleanedJson = cleanedJson
-                        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-                        .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Quote unquoted keys
-                        .replace(/:\s*([^",{\[\d][^,}\]]*)/g, ': "$1"'); // Quote unquoted string values
-                    
-                    try {
-                        aiAnalysis = JSON.parse(cleanedJson);
-                        console.log('Successfully parsed cleaned JSON');
-                    } catch (finalError) {
-                        console.error('Final JSON parsing attempt failed:', finalError.message);
-                        throw new Error(`Unable to parse AI response as JSON. Original error: ${parseError.message}`);
-                    }
+                    console.error('JSON extraction failed:', extractError.message);
+                    throw new Error(`Unable to parse AI response as JSON: ${parseError.message}`);
                 }
             } else {
-                console.error('No JSON pattern found in response');
                 throw new Error('No JSON found in AI response');
             }
         }
 
-        // Validate and clean the response structure
+        // Enhanced validation and cleaning for imported data
         const cleanedAnalysis = {
-            possibleDiagnoses: Array.isArray(aiAnalysis.possibleDiagnoses) 
-                ? aiAnalysis.possibleDiagnoses.filter(d => d && typeof d === 'string').slice(0, 5)
-                : ['Analysis requires manual review'],
-            
-            recommendedActions: typeof aiAnalysis.recommendedActions === 'string' 
+            possibleDiagnoses: Array.isArray(aiAnalysis.possibleDiagnoses)
+                ? aiAnalysis.possibleDiagnoses
+                    .filter(d => d && typeof d === 'string')
+                    .slice(0, 5)
+                    .map(d => d.trim())
+                : ['Preliminary assessment needed - insufficient data for specific diagnosis'],
+
+            recommendedActions: typeof aiAnalysis.recommendedActions === 'string'
                 ? aiAnalysis.recommendedActions.trim()
-                : 'Please proceed with standard clinical assessment',
-            
-            riskFactors: Array.isArray(aiAnalysis.riskFactors) 
-                ? aiAnalysis.riskFactors.filter(r => r && typeof r === 'string').slice(0, 5)
+                : 'Complete physical examination and obtain additional history as needed',
+
+            riskFactors: Array.isArray(aiAnalysis.riskFactors)
+                ? aiAnalysis.riskFactors
+                    .filter(r => r && typeof r === 'string')
+                    .slice(0, 5)
+                    .map(r => r.trim())
                 : [],
-            
-            followUpRecommendations: typeof aiAnalysis.followUpRecommendations === 'string' 
+
+            followUpRecommendations: typeof aiAnalysis.followUpRecommendations === 'string'
                 ? aiAnalysis.followUpRecommendations.trim()
-                : 'Follow standard clinical protocols',
-            
-            confidence: typeof aiAnalysis.confidence === 'number' && aiAnalysis.confidence >= 0 && aiAnalysis.confidence <= 100
+                : 'Schedule follow-up based on clinical assessment and patient response to initial treatment',
+
+            confidence: typeof aiAnalysis.confidence === 'number' &&
+                       aiAnalysis.confidence >= 0 && aiAnalysis.confidence <= 100
                 ? Math.round(aiAnalysis.confidence)
-                : 75,
-            
-            confidenceExplanation: typeof aiAnalysis.confidenceExplanation === 'string' 
+                : (symptoms?.includes("Nurse Initial Assessment") ? 65 : 75), // Lower confidence for nurse-imported data
+
+            confidenceExplanation: typeof aiAnalysis.confidenceExplanation === 'string'
                 ? aiAnalysis.confidenceExplanation.trim()
-                : 'Standard confidence level for AI medical analysis',
-            
-            additionalConsiderations: typeof aiAnalysis.additionalConsiderations === 'string' 
+                : (symptoms?.includes("Nurse Initial Assessment")
+                    ? 'Analysis based on initial nursing assessment - doctor examination needed for definitive diagnosis'
+                    : 'Standard confidence level for AI medical analysis'),
+
+            additionalConsiderations: typeof aiAnalysis.additionalConsiderations === 'string'
                 ? aiAnalysis.additionalConsiderations.trim()
-                : 'Continue monitoring patient condition',
-            
-            // Add metadata
+                : 'Continue monitoring patient condition and complete comprehensive examination',
+
+            // Add metadata with imported data flag
             analyzedAt: new Date().toISOString(),
             aiModel: "gemini-1.5-flash",
-            analysisVersion: "2.0"
+            analysisVersion: "2.1",
+            dataSource: symptoms?.includes("Nurse Initial Assessment") ? "nurse_imported" : "direct_entry"
         };
 
-        console.log('Sending cleaned analysis:', {
+        console.log('Sending enhanced analysis for imported data:', {
             diagnosesCount: cleanedAnalysis.possibleDiagnoses.length,
             confidence: cleanedAnalysis.confidence,
+            dataSource: cleanedAnalysis.dataSource,
             hasRecommendations: !!cleanedAnalysis.recommendedActions
         });
 
@@ -210,30 +209,30 @@ Respond with ONLY this JSON structure (no markdown formatting):
             name: error.name,
             stack: error.stack?.split('\n')[0]
         });
-        
-        // Handle specific Google AI API errors
+
+        // Handle specific errors
         if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('API key')) {
-            return res.status(500).json({ 
+            return res.status(500).json({
                 message: 'AI service configuration error. Please verify API key.',
                 error: 'Invalid or missing API key'
             });
         }
-        
+
         if (error.message?.includes('RATE_LIMIT_EXCEEDED') || error.message?.includes('quota')) {
-            return res.status(429).json({ 
+            return res.status(429).json({
                 message: 'AI service is temporarily busy. Please try again in a few moments.',
                 error: 'Rate limit exceeded'
             });
         }
-        
+
         if (error.message?.includes('SAFETY') || error.message?.includes('blocked')) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'AI analysis could not be completed due to content policies.',
                 error: 'Content safety restriction'
             });
         }
 
-        // Return a structured error response that matches the expected format
+        // Return a structured error response for imported data
         res.status(500).json({
             possibleDiagnoses: ['AI analysis temporarily unavailable - please review manually'],
             recommendedActions: 'AI service encountered an error. Please proceed with standard clinical assessment and consider consulting with colleagues.',
@@ -244,7 +243,8 @@ Respond with ONLY this JSON structure (no markdown formatting):
             additionalConsiderations: 'Manual clinical review required due to AI service interruption. Consider second opinion if complex case.',
             analyzedAt: new Date().toISOString(),
             aiModel: "gemini-1.5-flash",
-            analysisVersion: "2.0",
+            analysisVersion: "2.1",
+            dataSource: "error",
             error: true,
             errorMessage: error.message
         });
@@ -308,7 +308,7 @@ router.get('/stats', async (req, res) => {
             version: '2.0',
             features: [
                 'Medical diagnosis analysis',
-                'Risk factor assessment', 
+                'Risk factor assessment',
                 'Treatment recommendations',
                 'Follow-up planning'
             ],

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Home, User, Calendar, Phone, MapPin, FileText, Activity, Save, Plus, X, Stethoscope, Brain, AlertCircle, CheckCircle, Loader } from "lucide-react";
+import { Home, User, Calendar, Phone, MapPin, FileText, Activity, Save, Plus, X, Stethoscope, Brain, AlertCircle, CheckCircle, Loader, Download, Users } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const PatientCheckup = () => {
   const navigate = useNavigate();
   const params = useParams();
-  
+
   const patientId = params._id;
 
   // Core states
@@ -17,7 +17,7 @@ const PatientCheckup = () => {
   const [error, setError] = useState(null);
   const [doctorNotes, setDoctorNotes] = useState("");
   const [saveLoading, setSaveLoading] = useState(false);
-  
+
   // New checkup states
   const [showNewCheckupModal, setShowNewCheckupModal] = useState(false);
   const [newCheckupData, setNewCheckupData] = useState({
@@ -34,7 +34,12 @@ const PatientCheckup = () => {
     }
   });
   const [createCheckupLoading, setCreateCheckupLoading] = useState(false);
-  
+
+  // Nurse initial checkups states
+  const [availableInitialCheckups, setAvailableInitialCheckups] = useState([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+
   // AI states
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
@@ -48,6 +53,23 @@ const PatientCheckup = () => {
       "Content-Type": "application/json",
     };
   }, []);
+
+  // Fetch available initial checkups from nurse
+  const fetchAvailableInitialCheckups = useCallback(async () => {
+    if (!patientId) return;
+
+    try {
+      const API_URL = process.env.REACT_APP_API_URL;
+      const response = await axios.get(
+        `${API_URL}/api/patients/${patientId}/initial-checkups`,
+        { headers: getAuthHeaders() }
+      );
+      setAvailableInitialCheckups(response.data);
+    } catch (error) {
+      console.warn("No initial checkups available or error fetching:", error);
+      setAvailableInitialCheckups([]);
+    }
+  }, [patientId, getAuthHeaders]);
 
   // Fetch patient data and checkups
   useEffect(() => {
@@ -63,10 +85,10 @@ const PatientCheckup = () => {
 
       try {
         const API_URL = process.env.REACT_APP_API_URL;
-        
+
         // Fetch patient data
         const patientResponse = await axios.get(
-          `${API_URL}/api/patients/${patientId}`, 
+          `${API_URL}/api/patients/${patientId}`,
           { headers: getAuthHeaders() }
         );
 
@@ -82,11 +104,11 @@ const PatientCheckup = () => {
         // Fetch checkups from separate collection
         try {
           const checkupsResponse = await axios.get(
-            `${API_URL}/api/checkups/patient/${patientId}`, 
+            `${API_URL}/api/checkups/patient/${patientId}`,
             { headers: getAuthHeaders() }
           );
           setCheckups(checkupsResponse.data);
-          
+
           if (checkupsResponse.data.length > 0) {
             const firstCheckup = checkupsResponse.data[0];
             setSelectedCheckup(firstCheckup);
@@ -97,11 +119,14 @@ const PatientCheckup = () => {
           setCheckups([]);
         }
 
+        // Fetch available initial checkups from nurse
+        await fetchAvailableInitialCheckups();
+
       } catch (err) {
         console.error("Error loading data:", err);
-        
+
         let errorMessage = "Failed to load patient data";
-        
+
         if (err.response?.status === 404) {
           errorMessage = "Patient not found. Please check the patient ID.";
         } else if (err.response?.status === 401) {
@@ -111,7 +136,7 @@ const PatientCheckup = () => {
         } else if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
         }
-        
+
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -119,7 +144,49 @@ const PatientCheckup = () => {
     };
 
     loadData();
-  }, [patientId, getAuthHeaders]);
+  }, [patientId, getAuthHeaders, fetchAvailableInitialCheckups]);
+
+  // Import initial checkup from nurse
+  const handleImportInitialCheckup = useCallback(async (initialCheckup) => {
+    setImportLoading(true);
+    setError(null);
+
+    try {
+      const API_URL = process.env.REACT_APP_API_URL;
+
+      const response = await axios.post(
+        `${API_URL}/api/patients/${patientId}/convert-initial-checkup`,
+        { initialCheckupDate: initialCheckup.date },
+        { headers: getAuthHeaders() }
+      );
+
+      // Add the new checkup to the list
+      setCheckups(prev => [response.data, ...prev]);
+
+      // Select the imported checkup
+      setSelectedCheckup(response.data);
+      setDoctorNotes("");
+
+      // Refresh available initial checkups
+      await fetchAvailableInitialCheckups();
+
+      setShowImportModal(false);
+      setError("Initial checkup imported successfully! You can now add your diagnosis.");
+      setTimeout(() => setError(null), 5000);
+
+    } catch (err) {
+      console.error("Error importing initial checkup:", err);
+      let errorMessage = "Failed to import initial checkup. Please try again.";
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setImportLoading(false);
+    }
+  }, [patientId, getAuthHeaders, fetchAvailableInitialCheckups]);
 
   // Handle checkup selection
   const handleCheckupSelect = useCallback((checkup) => {
@@ -165,7 +232,7 @@ const PatientCheckup = () => {
 
     try {
       const API_URL = process.env.REACT_APP_API_URL;
-      
+
       const checkupPayload = {
         patientId: patientId,
         date: new Date(newCheckupData.date),
@@ -188,11 +255,11 @@ const PatientCheckup = () => {
 
       // Add new checkup to the list
       setCheckups(prev => [response.data, ...prev]);
-      
+
       // Select the new checkup
       setSelectedCheckup(response.data);
       setDoctorNotes("");
-      
+
       // Reset form
       setNewCheckupData({
         date: new Date().toISOString().split('T')[0],
@@ -207,7 +274,7 @@ const PatientCheckup = () => {
           height: ''
         }
       });
-      
+
       setShowNewCheckupModal(false);
       setError("Checkup created successfully!");
       setTimeout(() => setError(null), 3000);
@@ -215,9 +282,9 @@ const PatientCheckup = () => {
     } catch (err) {
       console.error("Error creating checkup:", err);
       console.error("Error response:", err.response?.data);
-      
+
       let errorMessage = "Failed to create checkup. Please try again.";
-      
+
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.error) {
@@ -227,7 +294,7 @@ const PatientCheckup = () => {
       } else if (err.response?.status === 401) {
         errorMessage = "Authentication failed. Please log in again.";
       }
-      
+
       setError(errorMessage);
     } finally {
       setCreateCheckupLoading(false);
@@ -251,7 +318,7 @@ const PatientCheckup = () => {
 
     try {
       const API_URL = process.env.REACT_APP_API_URL;
-      
+
       const response = await axios.put(
         `${API_URL}/api/checkups/${selectedCheckup._id}`,
         { doctorNotes: doctorNotes.trim() },
@@ -261,13 +328,13 @@ const PatientCheckup = () => {
       // Update the checkup in local state
       setCheckups(prevCheckups =>
         prevCheckups.map(checkup =>
-          checkup._id === selectedCheckup._id 
-            ? { ...checkup, doctorNotes: doctorNotes.trim() }
+          checkup._id === selectedCheckup._id
+            ? { ...checkup, aiResponse: response.data }
             : checkup
         )
       );
 
-      setSelectedCheckup({ ...selectedCheckup, doctorNotes: doctorNotes.trim() });
+      setSelectedCheckup({ ...selectedCheckup, aiResponse: response.data });
 
       setError("Notes saved successfully!");
       setTimeout(() => setError(null), 3000);
@@ -292,7 +359,7 @@ const PatientCheckup = () => {
 
     try {
       const API_URL = process.env.REACT_APP_API_URL;
-      
+
       // Prepare data for AI analysis
       const analysisData = {
         patientInfo: {
@@ -331,7 +398,7 @@ const PatientCheckup = () => {
       // Update local state
       setCheckups(prevCheckups =>
         prevCheckups.map(checkup =>
-          checkup._id === selectedCheckup._id 
+          checkup._id === selectedCheckup._id
             ? updatedCheckup
             : checkup
         )
@@ -384,14 +451,14 @@ const PatientCheckup = () => {
       const today = new Date();
       const birthDate = new Date(dateOfBirth);
       if (isNaN(birthDate.getTime())) return "N/A";
-      
+
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       return age >= 0 ? age : "N/A";
     } catch {
       return "N/A";
@@ -404,6 +471,123 @@ const PatientCheckup = () => {
     return calculateAge(patient.dateOfBirth || patient.birthdate);
   }, [patient, calculateAge]);
 
+  // Import Modal Component
+  const ImportModal = useMemo(() => {
+    if (!showImportModal) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowImportModal(false)}></div>
+
+          <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-medium text-gray-900">Import Initial Checkups from Nurse</h3>
+              </div>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                The following initial checkups were created by nurses and are available for import.
+                Once imported, you can add your diagnosis to complete the checkup.
+              </p>
+            </div>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {availableInitialCheckups.length > 0 ? (
+                availableInitialCheckups.map((checkup, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium text-gray-900">
+                            {formatDate(checkup.date)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatDateTime(checkup.date)}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                          <div>
+                            <span className="font-medium text-gray-600">Weight:</span>
+                            <p className="text-gray-900">{checkup.weight ? `${checkup.weight} kg` : 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">Temperature:</span>
+                            <p className="text-gray-900">{checkup.temperature ? `${checkup.temperature}°C` : 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-600">BP:</span>
+                            <p className="text-gray-900">{checkup.bloodPressure || 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        {checkup.notes && (
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-600">Nurse Notes:</span>
+                            <p className="text-gray-800 mt-1 bg-yellow-50 p-2 rounded border">
+                              {checkup.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleImportInitialCheckup(checkup)}
+                        disabled={importLoading}
+                        className="ml-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {importLoading ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Importing...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Import
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No Initial Checkups Available</h4>
+                  <p className="text-sm">
+                    No initial checkups from nurses are available for import, or all have already been converted to doctor checkups.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [showImportModal, availableInitialCheckups, importLoading, handleImportInitialCheckup, formatDate, formatDateTime]);
+
   // New Checkup Modal Component
   const NewCheckupModal = useMemo(() => {
     if (!showNewCheckupModal) return null;
@@ -412,7 +596,7 @@ const PatientCheckup = () => {
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex items-center justify-center min-h-screen px-4 text-center sm:block sm:p-0">
           <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setShowNewCheckupModal(false)}></div>
-          
+
           <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Create New Checkup</h3>
@@ -577,6 +761,15 @@ const PatientCheckup = () => {
             <h1 className="text-3xl font-bold text-gray-900">Patient Checkup</h1>
           </div>
           <div className="flex gap-3">
+            {availableInitialCheckups.length > 0 && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Download size={20} />
+                Import from Nurse ({availableInitialCheckups.length})
+              </button>
+            )}
             <button
               onClick={() => setShowNewCheckupModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -638,14 +831,14 @@ const PatientCheckup = () => {
                     <User className="w-6 h-6 text-blue-600" />
                     <h2 className="text-xl font-semibold text-gray-900">Patient Information</h2>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">{patient.name}</h3>
                       <p className="text-sm text-gray-500">ID: {patient._id}</p>
                       {patient.nik && <p className="text-sm text-gray-500">NIK: {patient.nik}</p>}
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <span className="font-medium text-gray-600">Age:</span>
@@ -662,26 +855,26 @@ const PatientCheckup = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-600">DOB:</span>
                         <span className="text-gray-900">{formatDate(patient.dateOfBirth || patient.birthdate)}</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-600">Contact:</span>
                         <span className="text-gray-900">{patient.phone || patient.contact || "Not provided"}</span>
                       </div>
-                      
+
                       <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
                         <span className="text-gray-600">Address:</span>
                         <span className="text-gray-900">{patient.address || "Not provided"}</span>
                       </div>
-                      
+
                       {patient.medicalHistory && (
                         <div className="pt-2 border-t">
                           <span className="font-medium text-gray-600">Medical History:</span>
@@ -708,15 +901,27 @@ const PatientCheckup = () => {
                     <FileText className="w-6 h-6 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Checkups ({checkups.length})</h3>
                   </div>
-                  <button
-                    onClick={() => setShowNewCheckupModal(true)}
-                    className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </button>
+                  <div className="flex gap-2">
+                    {availableInitialCheckups.length > 0 && (
+                      <button
+                        onClick={() => setShowImportModal(true)}
+                        className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm"
+                        title="Import initial checkups from nurses"
+                      >
+                        <Download className="w-4 h-4" />
+                        Import ({availableInitialCheckups.length})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowNewCheckupModal(true)}
+                      className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   {checkups.length > 0 ? (
                     checkups.map((checkup, index) => (
@@ -730,24 +935,30 @@ const PatientCheckup = () => {
                         }`}
                       >
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="min-w-0">
                             <p className="font-medium text-gray-900">
                               {formatDate(checkup.date)}
                             </p>
                             <p className="text-sm text-gray-600 capitalize">
                               {checkup.type || "General"} Checkup
                             </p>
+                            {checkup.nurseInitialData && (
+                              <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                Imported from Nurse
+                              </p>
+                            )}
                             {checkup.symptoms && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">
+                              <p className="text-xs text-gray-500 mt-1 break-words">
                                 {checkup.symptoms.substring(0, 50)}...
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             <p className="text-xs text-gray-500">
                               {formatDateTime(checkup.createdAt || checkup.date)}
                             </p>
-                            <div className="flex items-center gap-1 mt-1">
+                            <div className="flex items-center gap-1 mt-1 justify-end">
                               {checkup.doctorNotes && (
                                 <div className="flex items-center gap-1">
                                   <Stethoscope className="w-3 h-3 text-blue-500" />
@@ -769,14 +980,30 @@ const PatientCheckup = () => {
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                       <p>No checkups found</p>
-                      <p className="text-sm mt-1">Create a new checkup to get started</p>
-                      <button
-                        onClick={() => setShowNewCheckupModal(true)}
-                        className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Create First Checkup
-                      </button>
+                      <p className="text-sm mt-1">
+                        {availableInitialCheckups.length > 0
+                          ? "Import initial checkups from nurses or create a new one"
+                          : "Create a new checkup to get started"
+                        }
+                      </p>
+                      <div className="flex justify-center gap-3 mt-3">
+                        {availableInitialCheckups.length > 0 && (
+                          <button
+                            onClick={() => setShowImportModal(true)}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Import from Nurse ({availableInitialCheckups.length})
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowNewCheckupModal(true)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Create New Checkup
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -790,30 +1017,79 @@ const PatientCheckup = () => {
                   <div className="flex justify-between items-start mb-6">
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900">Checkup Details</h3>
-                      <p className="text-gray-600 mt-1">
-                        {formatDateTime(selectedCheckup.date)} • {selectedCheckup.type || "General"} Checkup
-                      </p>
-                    </div>
-                    {selectedCheckup.doctorNotes && !selectedCheckup.aiResponse && (
-                      <button
-                        onClick={handleAiAnalysis}
-                        disabled={aiAnalysisLoading}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-                      >
-                        {aiAnalysisLoading ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Brain className="w-4 h-4" />
-                            AI Cross-Check
-                          </>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-gray-600">
+                          {formatDateTime(selectedCheckup.date)} • {selectedCheckup.type || "General"} Checkup
+                        </p>
+                        {selectedCheckup.nurseInitialData && (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
+                            <Users className="w-3 h-3" />
+                            Imported from Nurse
+                          </div>
                         )}
-                      </button>
-                    )}
+                      </div>
+                    </div>
+                      {(selectedCheckup.doctorNotes || selectedCheckup.nurseInitialData) && !selectedCheckup.aiResponse && (
+                        <button
+                          onClick={handleAiAnalysis}
+                          disabled={aiAnalysisLoading}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                        >
+                          {aiAnalysisLoading ? (
+                            <>
+                              <Loader className="w-4 h-4 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <Brain className="w-4 h-4" />
+                              AI Cross-Check
+                            </>
+                          )}
+                        </button>
+                      )}
                   </div>
+
+                  {/* Nurse Initial Data Section */}
+                  {selectedCheckup.nurseInitialData && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-purple-600" />
+                        Initial Assessment by Nurse
+                      </h4>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-3">
+                          {selectedCheckup.nurseInitialData.weight && (
+                            <div>
+                              <span className="font-medium text-purple-800">Weight:</span>
+                              <p className="text-purple-700">{selectedCheckup.nurseInitialData.weight} kg</p>
+                            </div>
+                          )}
+                          {selectedCheckup.nurseInitialData.temperature && (
+                            <div>
+                              <span className="font-medium text-purple-800">Temperature:</span>
+                              <p className="text-purple-700">{selectedCheckup.nurseInitialData.temperature}°C</p>
+                            </div>
+                          )}
+                          {selectedCheckup.nurseInitialData.bloodPressure && (
+                            <div>
+                              <span className="font-medium text-purple-800">Blood Pressure:</span>
+                              <p className="text-purple-700">{selectedCheckup.nurseInitialData.bloodPressure}</p>
+                            </div>
+                          )}
+                        </div>
+                        {selectedCheckup.nurseInitialData.notes && (
+                          <div>
+                            <span className="font-medium text-purple-800">Nurse Notes:</span>
+                            <p className="text-purple-700 mt-1">{selectedCheckup.nurseInitialData.notes}</p>
+                          </div>
+                        )}
+                        <div className="text-xs text-purple-600 mt-2 border-t pt-2">
+                          Imported on: {formatDateTime(selectedCheckup.nurseInitialData.convertedAt)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Symptoms */}
                   {selectedCheckup.symptoms && (
@@ -826,7 +1102,7 @@ const PatientCheckup = () => {
                   )}
 
                   {/* Vital Signs */}
-                  {selectedCheckup.vitalSigns && Object.values(selectedCheckup.vitalSigns).some(v => v) && (
+                  {selectedCheckup.vitalSigns && Object.values(selectedCheckup.vitalSigns).some(v => v) && !selectedCheckup.nurseInitialData && (
                     <div className="mb-6">
                       <h4 className="font-medium text-gray-900 mb-3">Vital Signs</h4>
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -867,7 +1143,7 @@ const PatientCheckup = () => {
                   )}
 
                   {/* Physical Examination Details */}
-                  {selectedCheckup.details && (
+                  {selectedCheckup.details && !selectedCheckup.nurseInitialData && (
                     <div className="mb-6">
                       <h4 className="font-medium text-gray-900 mb-3">Physical Examination & Findings</h4>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -891,7 +1167,7 @@ const PatientCheckup = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       {aiAnalysisResult || selectedCheckup.aiResponse ? (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
                           {(aiAnalysisResult?.possibleDiagnoses || selectedCheckup.aiResponse?.possibleDiagnoses) && (
@@ -902,48 +1178,6 @@ const PatientCheckup = () => {
                                   <li key={index}>{diagnosis}</li>
                                 ))}
                               </ul>
-                            </div>
-                          )}
-                          
-                          {(aiAnalysisResult?.recommendedActions || selectedCheckup.aiResponse?.recommendedActions) && (
-                            <div>
-                              <span className="font-medium text-purple-800">Recommended Actions:</span>
-                              <p className="text-purple-700 mt-1">{aiAnalysisResult?.recommendedActions || selectedCheckup.aiResponse?.recommendedActions}</p>
-                            </div>
-                          )}
-                          
-                          {(aiAnalysisResult?.riskFactors || selectedCheckup.aiResponse?.riskFactors) && (
-                            <div>
-                              <span className="font-medium text-purple-800">Risk Factors:</span>
-                              <ul className="text-purple-700 mt-1 list-disc list-inside">
-                                {(aiAnalysisResult?.riskFactors || selectedCheckup.aiResponse?.riskFactors).map((risk, index) => (
-                                  <li key={index}>{risk}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {(aiAnalysisResult?.followUpRecommendations || selectedCheckup.aiResponse?.followUpRecommendations) && (
-                            <div>
-                              <span className="font-medium text-purple-800">Follow-up Recommendations:</span>
-                              <p className="text-purple-700 mt-1">{aiAnalysisResult?.followUpRecommendations || selectedCheckup.aiResponse?.followUpRecommendations}</p>
-                            </div>
-                          )}
-                          
-                          {(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence) && (
-                            <div className="border-t pt-3">
-                              <span className="font-medium text-purple-800">Confidence Level:</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex-1 bg-purple-200 rounded-full h-2">
-                                  <div 
-                                    className="bg-purple-600 h-2 rounded-full" 
-                                    style={{ width: `${(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence)}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-purple-700 text-sm font-medium">
-                                  {(aiAnalysisResult?.confidence || selectedCheckup.aiResponse?.confidence)}%
-                                </span>
-                              </div>
                               {(aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation) && (
                                 <p className="text-purple-600 text-sm mt-1">
                                   {aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation}
@@ -951,7 +1185,47 @@ const PatientCheckup = () => {
                               )}
                             </div>
                           )}
-                          
+                          <div className="flex justify-between items-center pt-3 border-t">
+                            <button
+                              onClick={handleAiAnalysis}
+                              disabled={aiAnalysisLoading}
+                              className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm"
+                            >
+                              {aiAnalysisLoading ? (
+                                <>
+                                  <Loader className="w-3 h-3 animate-spin" />
+                                  Re-analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <Brain className="w-3 h-3" />
+                                  Run Again
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const API_URL = process.env.REACT_APP_API_URL;
+                                  await axios.put(
+                                    `${API_URL}/api/checkups/${selectedCheckup._id}`,
+                                    { aiResponse: aiAnalysisResult || selectedCheckup.aiResponse },
+                                    { headers: getAuthHeaders() }
+                                  );
+                                  setError("AI analysis saved successfully!");
+                                  setTimeout(() => setError(null), 3000);
+                                } catch (err) {
+                                  setError("Failed to save AI analysis");
+                                }
+                              }}
+                              className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                            >
+                              <Save className="w-3 h-3" />
+                              Save Analysis
+                            </button>
+                          </div>
+
                           <div className="border-t pt-3">
                             <div className="flex items-center gap-2 text-xs text-purple-600">
                               <AlertCircle className="w-4 h-4" />
@@ -981,20 +1255,20 @@ const PatientCheckup = () => {
                         </span>
                       )}
                     </div>
-                    
+
                     <textarea
                       className="w-full h-64 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       value={doctorNotes}
                       onChange={handleDoctorNotesChange}
                       placeholder="Enter your medical assessment, diagnosis, treatment plan, medications, and recommendations here..."
                     />
-                    
+
                     <div className="flex justify-between items-center mt-3">
                       <p className="text-sm text-gray-500">
                         {doctorNotes.length} characters
                       </p>
                       <div className="flex gap-3">
-                        {doctorNotes.trim() && !selectedCheckup.aiResponse && (
+                        {(doctorNotes.trim() || selectedCheckup.nurseInitialData) && !selectedCheckup.aiResponse && (
                           <button
                             onClick={handleAiAnalysis}
                             disabled={aiAnalysisLoading}
@@ -1042,19 +1316,33 @@ const PatientCheckup = () => {
                     Select a checkup from the list to view and edit details, or create a new one
                   </p>
                   {checkups.length === 0 && patient && (
-                    <button
-                      onClick={() => setShowNewCheckupModal(true)}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Create First Checkup
-                    </button>
+                    <div className="flex justify-center gap-3">
+                      {availableInitialCheckups.length > 0 && (
+                        <button
+                          onClick={() => setShowImportModal(true)}
+                          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                        >
+                          <Download className="w-5 h-5" />
+                          Import from Nurse ({availableInitialCheckups.length})
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowNewCheckupModal(true)}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Create New Checkup
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           </div>
         )}
+
+        {/* Import Modal */}
+        {ImportModal}
 
         {/* New Checkup Modal */}
         {NewCheckupModal}
