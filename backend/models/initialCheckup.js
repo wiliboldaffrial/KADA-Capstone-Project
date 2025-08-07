@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const initialCheckupSchema = new mongoose.Schema(
   {
     date: { type: Date, required: true },
-    weight: Number,
-    // height: Number,
+    temperature: String,
     bloodPressure: String,
-    temperature: Number,
+    heartRate: String,
+    weight: String,
+    height: String,
     notes: String,
   },
   { _id: false }

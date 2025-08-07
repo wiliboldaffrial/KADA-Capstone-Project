@@ -19,9 +19,11 @@ const checkupSchema = new mongoose.Schema({
 
     // Store original nurse initial checkup data (if converted from nurse checkup)
     nurseInitialData: {
-        weight: Number,
+        temperature: String,
         bloodPressure: String,
-        temperature: Number,
+        heartRate: String,
+        weight: String,
+        height: String,
         notes: String,
         convertedAt: Date
     },

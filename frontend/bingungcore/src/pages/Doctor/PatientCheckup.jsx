@@ -1102,7 +1102,7 @@ const PatientCheckup = () => {
                   )}
 
                   {/* Vital Signs */}
-                  {selectedCheckup.vitalSigns && Object.values(selectedCheckup.vitalSigns).some(v => v) && (
+                  {selectedCheckup.vitalSigns && Object.values(selectedCheckup.vitalSigns).some(v => v) && !selectedCheckup.nurseInitialData && (
                     <div className="mb-6">
                       <h4 className="font-medium text-gray-900 mb-3">Vital Signs</h4>
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1143,7 +1143,7 @@ const PatientCheckup = () => {
                   )}
 
                   {/* Physical Examination Details */}
-                  {selectedCheckup.details && (
+                  {selectedCheckup.details && !selectedCheckup.nurseInitialData && (
                     <div className="mb-6">
                       <h4 className="font-medium text-gray-900 mb-3">Physical Examination & Findings</h4>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
