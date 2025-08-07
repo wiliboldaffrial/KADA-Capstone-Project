@@ -6,9 +6,12 @@ require("dotenv").config();
 require("./config/passport");
 
 const app = express();
+const corsOptions={
+    origin: "https://your-future-netlify-url.netlify.app"
+};
 
 // Middleware
-app.use(cors());
+app.use(cors(cors(corsOptions)));
 app.use(express.json());
 app.use(passport.initialize());
 
