@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import { format } from "date-fns";
+import { format, isToday, isThisWeek, isThisMonth } from "date-fns";
 import { toast } from "react-hot-toast";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import { Search, ArrowDownAZ, ArrowUpAZ } from "lucide-react"; // NEW: Icons for UI
 
 const APPOINTMENTS_URL = "http://localhost:5000/api/appointments";
 const CHECKUPS_URL = "http://localhost:5000/api/checkups";
@@ -55,6 +56,11 @@ const PatientList = () => {
   const [doctorHistory, setDoctorHistory] = useState([]);
   const [activeDoctorCheckup, setActiveDoctorCheckup] = useState(null);
 
+  const [filter, setFilter] = useState("all");
+
+  // NEW: State for sorting
+  const [sortOrder, setSortOrder] = useState("asc"); // 'asc' or 'desc'
+
   const getAuthHeaders = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
   useEffect(() => {
@@ -75,7 +81,6 @@ const PatientList = () => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // Fetch doctor checkup history by patient name
   const fetchDoctorHistory = async (patientId) => {
     try {
       const response = await axios.get(`${CHECKUPS_URL}/patient/${patientId}`, getAuthHeaders());
@@ -86,7 +91,6 @@ const PatientList = () => {
     }
   };
 
-  // When an appointment is selected
   const handleToggleAppointment = async (appointment) => {
     const isOpening = selectedAppointmentId !== appointment._id;
     setDoctorHistory([]);
@@ -94,16 +98,10 @@ const PatientList = () => {
     setSelectedAppointmentId(isOpening ? appointment._id : null);
 
     if (isOpening) {
-      // Set nurse checkup form data
       const nurseCheckup = Array.isArray(appointment.checkups) && appointment.checkups.length > 0 ? appointment.checkups[0] : initialFormState;
       setInitialCheckupForm(nurseCheckup);
 
-      // Fetch doctor checkup history by patient name
-      // const patientName = appointment.patient;
-      // if (patientName) {
-      //   await fetchDoctorHistory(patientName);
-
-      const patientId = appointment.patient?._id; 
+      const patientId = appointment.patient?._id;
       if (patientId) {
         await fetchDoctorHistory(patientId);
       }
@@ -115,7 +113,6 @@ const PatientList = () => {
     setInitialCheckupForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Add initial checkup
   const handleAddInitialCheckup = async (e) => {
     e.preventDefault();
     if (!selectedAppointmentId) return;
@@ -139,7 +136,6 @@ const PatientList = () => {
     }
   };
 
-  // Reset initial checkup (delete from appointment)
   const handleResetCheckup = async () => {
     if (!selectedAppointmentId) return;
     const endpoint = `${APPOINTMENTS_URL}/${selectedAppointmentId}/checkups/reset`;
@@ -154,14 +150,39 @@ const PatientList = () => {
     }
   };
 
-  // const filteredAppointments = appointments.filter((app) => {
-  //   const patientName = app.patient;
-  //   return typeof patientName === "string" && patientName.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter and sort appointments
+  const processedAppointments = appointments
+    .filter((app) => {
+      const patientName = app.patient?.name || "Unknown";
+      const matchesSearchTerm = patientName.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const filteredAppointments = appointments.filter((app) => {
-    const patientName = app.patient?.name || "Unknown";   
-    return patientName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+      if (!matchesSearchTerm) {
+        return false;
+      }
+
+      const appointmentDate = new Date(app.dateTime);
+      if (filter === "today") {
+        return isToday(appointmentDate);
+      }
+      if (filter === "week") {
+        return isThisWeek(appointmentDate, { weekStartsOn: 1 });
+      }
+      if (filter === "month") {
+        return isThisMonth(appointmentDate);
+      }
+
+      return true;
+    })
+    // NEW: Sorting logic added
+    .sort((a, b) => {
+      const nameA = a.patient?.name || "Unknown";
+      const nameB = b.patient?.name || "Unknown";
+      if (sortOrder === "asc") {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
 
   return (
     <>
@@ -169,13 +190,48 @@ const PatientList = () => {
       <main className="flex-1 p-8 bg-gray-100">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Hello Nurse {nurseName} 👋</h1>
-          <div className="flex items-center space-x-4">
-            <input type="text" placeholder="Search patient..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="border px-4 py-2 rounded-lg" />
+          {/* NEW: Aesthetic search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search patient..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border border-gray-300 bg-white px-4 py-2 pl-10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mb-6">
+          {/* Filter buttons */}
+          <div className="flex space-x-2">
+            <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === "all" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              All
+            </button>
+            <button onClick={() => setFilter("today")} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === "today" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              Today
+            </button>
+            <button onClick={() => setFilter("week")} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === "week" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              This Week
+            </button>
+            <button onClick={() => setFilter("month")} className={`px-4 py-2 rounded-lg text-sm font-medium ${filter === "month" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              This Month
+            </button>
+          </div>
+          {/* NEW: Sort buttons */}
+          <div className="flex space-x-2">
+            <button onClick={() => setSortOrder("asc")} className={`p-2 rounded-lg ${sortOrder === "asc" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              <ArrowUpAZ size={20} />
+            </button>
+            <button onClick={() => setSortOrder("desc")} className={`p-2 rounded-lg ${sortOrder === "desc" ? "bg-blue-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50"}`}>
+              <ArrowDownAZ size={20} />
+            </button>
           </div>
         </div>
 
         <div className="space-y-4">
-          {filteredAppointments.map((app) => {
+          {processedAppointments.map((app) => {
             const isSelected = selectedAppointmentId === app._id;
             const patient = app.patient;
 
