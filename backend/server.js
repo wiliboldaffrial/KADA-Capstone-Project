@@ -6,12 +6,9 @@ require("dotenv").config();
 require("./config/passport");
 
 const app = express();
-const corsOptions={
-    origin: "https://your-future-netlify-url.netlify.app"
-};
 
 // Middleware
-app.use(cors(cors(corsOptions)));
+app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
 
@@ -28,9 +25,6 @@ const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 
-app.use("/", (req, res) => {
-    res.send("Backend is running!")
-})
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", passport.authenticate("jwt", { session: false }), patientRoutes);
 app.use("/api/checkups", passport.authenticate("jwt", { session: false }), checkupRoutes);
@@ -40,5 +34,5 @@ app.use("/api/users", passport.authenticate("jwt", { session: false }), userRout
 app.use("/api/rooms", passport.authenticate("jwt", { session: false }), roomRoutes);
 app.use("/api/ai", passport.authenticate("jwt", { session: false }), aiRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
