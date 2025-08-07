@@ -1,76 +1,40 @@
 import React, { useState, useEffect } from "react";
-
-// Removed: import SideBar from "../components/SideBar";
-
 import PatientChartDay from "../components/PatientChartDay";
-
 import PatientBarChart from "../components/PatientBarMonth";
-
 import axios from "axios";
-
 import { format, isToday, startOfWeek, subDays, eachDayOfInterval, subMonths, eachMonthOfInterval } from "date-fns";
-
 import { toast } from "react-hot-toast";
-
 import { useUser } from "../UserContext";
 
 // Define API URLs
-
-const PATIENTS_API_URL = "http://localhost:5000/api/patients";
-
-const APPOINTMENTS_API_URL = "http://localhost:5000/api/appointments";
-
-const ANNOUNCEMENTS_API_URL = "http://localhost:5000/api/announcements";
-
-const ROOMS_API_URL = "http://localhost:5000/api/rooms";
-
-const USERS_API_URL = "http://localhost:5000/api/users";
+const PATIENTS_API_URL = `${process.env.REACT_APP_API_URL}/api/patients`;
+const APPOINTMENTS_API_URL = `${process.env.REACT_APP_API_URL}/api/appointments`;
+const ANNOUNCEMENTS_API_URL = `${process.env.REACT_APP_API_URL}/api/announcements`;
+const ROOMS_API_URL = `${process.env.REACT_APP_API_URL}/api/rooms`;
+const USERS_API_URL = `${process.env.REACT_APP_API_URL}/api/users`;
 
 const Dashboard = () => {
   console.log("Dashboard component is rendering.");
-
-  // Removed: isSidebarCollapsed and toggleSideBar
-
-  // const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  // const toggleSideBar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
-
-  // NEW: State for dynamic dashboard data
-
   const [patientCount, setPatientCount] = useState(0);
-
   const [availableRooms, setAvailableRooms] = useState(0);
-
   const [todaysAppointments, setTodaysAppointments] = useState([]);
-
   const [latestAnnouncement, setLatestAnnouncement] = useState(null);
-
   const [weeklyPatientData, setWeeklyPatientData] = useState([]);
-
   const [monthlyPatientData, setMonthlyPatientData] = useState([]);
-
   const [authorNameMap, setAuthorNameMap] = useState([]);
-
   const [authorRoleMap, setAuthorRoleMap] = useState([]);
-
   const sortedAppointments = [...todaysAppointments].sort((a, b) => {
     const now = new Date();
-
     const aIsPast = new Date(a.dateTime) < now;
-
     const bIsPast = new Date(b.dateTime) < now;
-
     if (aIsPast && !bIsPast) return 1;
-
     if (!aIsPast && bIsPast) return -1;
-
     return new Date(a.dateTime) - new Date(b.dateTime);
   });
 
   useEffect(() => {
     const getAuthHeaders = () => {
       const token = localStorage.getItem("token");
-
       return { headers: { Authorization: `Bearer ${token}` } };
     };
 
@@ -78,27 +42,19 @@ const Dashboard = () => {
       try {
         const [patientRes, appointmentRes, announcementRes, roomRes] = await Promise.all([
           axios.get(PATIENTS_API_URL, getAuthHeaders()),
-
           axios.get(APPOINTMENTS_API_URL, getAuthHeaders()),
-
           axios.get(ANNOUNCEMENTS_API_URL, getAuthHeaders()),
-
           axios.get(ROOMS_API_URL, getAuthHeaders()),
         ]);
 
         setPatientCount(patientRes.data.length);
-
         const todayApps = appointmentRes.data.filter((app) => isToday(new Date(app.dateTime)));
-
         setTodaysAppointments(todayApps);
-
         setPatientCount(todayApps.length);
 
         if (announcementRes.data.length > 0) {
           const latest = announcementRes.data[0];
-
           setLatestAnnouncement(latest);
-
           if (
             latest.author &&
             typeof latest.author === "string" &&
@@ -108,7 +64,6 @@ const Dashboard = () => {
           ) {
             try {
               const userRes = await axios.get(`${USERS_API_URL}/${latest.author}`, getAuthHeaders());
-
               if (userRes.data) {
                 setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: userRes.data.name.charAt(0).toUpperCase() + userRes.data.name.slice(1) }));
 
@@ -121,11 +76,9 @@ const Dashboard = () => {
                 } else {
                   roleToDisplay = "Unknown Role";
                 }
-
                 setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: roleToDisplay }));
               } else {
                 setAuthorNameMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown User" }));
-
                 setAuthorRoleMap((prevMap) => ({ ...prevMap, [latest.author]: "Unknown Role" }));
               }
             } catch (userError) {
@@ -145,20 +98,15 @@ const Dashboard = () => {
         // Process appointments to get weekly data patient
 
         const now = new Date();
-
         const startOfLast7Days = subDays(now, 6); // Calculate the date 6 days ago
-
         const startof6MonthsAgo = subMonths(now, 5);
-
         const days = eachDayOfInterval({
           start: startOfLast7Days,
-
           end: now,
         });
 
         const months = eachMonthOfInterval({
           start: startof6MonthsAgo,
-
           end: now,
         });
 
@@ -169,7 +117,6 @@ const Dashboard = () => {
 
           return {
             day: format(day, "E"), // E returns Mon, Tue, etc
-
             patients: count,
           };
         });
@@ -181,7 +128,6 @@ const Dashboard = () => {
 
           return {
             month: format(month, "MMM"),
-
             patients: count,
           };
         });
@@ -189,7 +135,6 @@ const Dashboard = () => {
         setMonthlyPatientData(monthLyCounts);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
-
         toast.error("Could not load dashboard data. Please log in.");
       }
     };
@@ -254,7 +199,6 @@ const Dashboard = () => {
                   <li key={appt._id} className="py-2 flex justify-between items-center">
                     <div>
                       <p>{appt.patient?.name || "Unknown Patient"}</p>
-
                       <p className="text-xs text-gray-500">
                         {format(new Date(appt.dateTime), "p")} with {appt.doctor?.name || "Unknown Doctor"}
                       </p>

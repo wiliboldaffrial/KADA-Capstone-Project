@@ -5,8 +5,8 @@ import { toast } from "react-hot-toast";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { Search, ArrowDownAZ, ArrowUpAZ, ChevronDown, ChevronUp, Stethoscope, HeartPulse, Thermometer, User, Calendar } from "lucide-react";
 
-const APPOINTMENTS_URL = "http://localhost:5000/api/appointments";
-const CHECKUPS_URL = "http://localhost:5000/api/checkups";
+const APPOINTMENTS_URL = `${process.env.REACT_APP_API_URL}/api/appointments`;
+const CHECKUPS_URL = `${process.env.REACT_APP_API_URL}/api/checkups`;
 
 const DoctorCheckupDetail = ({ checkup }) => {
   if (!checkup) {

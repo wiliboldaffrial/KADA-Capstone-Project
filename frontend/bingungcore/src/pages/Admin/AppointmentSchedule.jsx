@@ -5,9 +5,9 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 
-const APPOINTMENT_API_URL = "http://localhost:5000/api/appointments";
-const PATIENT_API_URL = "http://localhost:5000/api/patients";
-const USER_API_URL = "http://localhost:5000/api/users";
+const APPOINTMENT_API_URL = `${process.env.REACT_APP_API_URL}/api/appointments`;
+const PATIENT_API_URL = `${process.env.REACT_APP_API_URL}/api/patients`;
+const USER_API_URL = `${process.env.REACT_APP_API_URL}/api/users`;
 
 // A more robust Searchable Input component
 const SearchableInput = ({ value, onChange, itemList, displayKey, placeholder, onFocus, name }) => {
