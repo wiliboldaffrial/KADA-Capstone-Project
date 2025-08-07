@@ -99,9 +99,13 @@ const PatientList = () => {
       setInitialCheckupForm(nurseCheckup);
 
       // Fetch doctor checkup history by patient name
-      const patientName = appointment.patient;
-      if (patientName) {
-        await fetchDoctorHistory(patientName);
+      // const patientName = appointment.patient;
+      // if (patientName) {
+      //   await fetchDoctorHistory(patientName);
+
+      const patientId = appointment.patient?._id; 
+      if (patientId) {
+        await fetchDoctorHistory(patientId);
       }
     }
   };
@@ -150,9 +154,13 @@ const PatientList = () => {
     }
   };
 
-  const filteredAppointments = appointments.filter((app) => {
-    const patientName = app.patient;
-    return typeof patientName === "string" && patientName.toLowerCase().includes(searchTerm.toLowerCase());
+  // const filteredAppointments = appointments.filter((app) => {
+  //   const patientName = app.patient;
+  //   return typeof patientName === "string" && patientName.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const filteredAppointments = appointments.filter((app) => {
+    const patientName = app.patient?.name || "Unknown";   
+    return patientName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -169,7 +177,7 @@ const PatientList = () => {
         <div className="space-y-4">
           {filteredAppointments.map((app) => {
             const isSelected = selectedAppointmentId === app._id;
-            const patientName = app.patient;
+            const patient = app.patient;
 
             return (
               <div key={app._id} className="bg-white rounded-xl shadow-sm">
@@ -177,7 +185,7 @@ const PatientList = () => {
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-cyan-200 rounded-full flex-shrink-0"></div>
                     <div>
-                      <p className="font-bold text-lg text-gray-900">{patientName}</p>
+                      <p className="font-bold text-lg text-gray-900">{patient?.name}</p>
                       <p className="text-sm text-gray-500">Schedule: {format(new Date(app.dateTime), "dd MMMM yyyy, HH:mm")}</p>
                     </div>
                   </div>

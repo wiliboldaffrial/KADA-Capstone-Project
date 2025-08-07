@@ -42,9 +42,22 @@ router.post("/:id/checkups", async (req, res) => {
       return res.status(404).json({ message: "Appointment not found" });
     }
 
+    const checkupData = req.body;
+
     // Add the new checkup data to the appointment's embedded checkups array
-    appointment.checkups.push(req.body);
+    appointment.checkups.push(checkupData);
     await appointment.save();
+    console.log("Checkup saved to Appointment");
+
+    await appointment.populate("patient");
+
+    if (appointment.patient) {
+      appointment.patient.checkups.push(checkupData);
+      await appointment.patient.save();
+      console.log("Checkup saved to Patient");
+    } else {
+      console.warn("Patient not found for appointment");
+    }
     
     // Return the newly added checkup (it's the last one in the array)
     res.status(201).json(appointment.checkups[appointment.checkups.length - 1]);
