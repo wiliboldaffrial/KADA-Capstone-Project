@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, parseISO } from "date-fns";
-import { ChevronLeft, ChevronRight, X, Edit, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isToday, addMonths, subMonths, parseISO, startOfWeek, endOfWeek } from "date-fns";
+import { ChevronLeft, ChevronRight, X, Edit, Trash2, Plus, Clock, User, Stethoscope, Calendar as CalendarIcon } from "lucide-react";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { toast } from "react-hot-toast";
 import axios from "axios";
@@ -9,75 +9,119 @@ const APPOINTMENT_API_URL = "http://localhost:5000/api/appointments";
 const PATIENT_API_URL = "http://localhost:5000/api/patients";
 const USER_API_URL = "http://localhost:5000/api/users";
 
+// A more robust Searchable Input component
+const SearchableInput = ({ value, onChange, itemList, displayKey, placeholder, onFocus, name }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (value && itemList.length > 0) {
+      const selectedItem = itemList.find((item) => item._id === value);
+      setSearchTerm(selectedItem ? selectedItem[displayKey] : "");
+    } else {
+      setSearchTerm("");
+    }
+  }, [value, itemList, displayKey]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [wrapperRef]);
+
+  const filteredItems = itemList.filter((item) => item[displayKey].toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+    const syntheticEvent = { target: { name, value: "" } };
+    onChange(syntheticEvent);
+    setDropdownOpen(true);
+  };
+
+  const handleSelectItem = (item) => {
+    const syntheticEvent = { target: { name, value: item._id } };
+    onChange(syntheticEvent);
+    setSearchTerm(item[displayKey]);
+    setDropdownOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={handleInputChange}
+        onFocus={() => {
+          setDropdownOpen(true);
+          if (onFocus) onFocus();
+        }}
+        autoComplete="off"
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+        required
+      />
+      {isDropdownOpen && filteredItems.length > 0 && (
+        <div className="absolute z-20 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg">
+          {filteredItems.map((item) => (
+            <div key={item._id} onClick={() => handleSelectItem(item)} className="p-2 hover:bg-blue-50 cursor-pointer">
+              <p className="font-semibold">{item[displayKey]}</p>
+              {item.nik && <p className="text-sm text-gray-500">NIK: {item.nik}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AppointmentSchedule = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [patientList, setPatientList] = useState([]);
-  const [doctorList, setDoctorList] = useState([]); // New state for doctors
+  const [doctorList, setDoctorList] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingData, setEditingData] = useState(null);
 
   const [newAppointment, setNewAppointment] = useState({ patient: "", doctor: "", dateTime: "", notes: "" });
+  const [editingData, setEditingData] = useState(null);
 
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
 
-  // --- API Communication ---
+  const getAuthHeaders = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    return { headers: { Authorization: `Bearer ${token}` } };
-  };
-
-  const fetchAppointments = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get(APPOINTMENT_API_URL, getAuthHeaders());
-      const formattedAppointments = response.data.map((app) => ({
+      const [appsRes, patientsRes, doctorsRes] = await Promise.all([axios.get(APPOINTMENT_API_URL, getAuthHeaders()), axios.get(PATIENT_API_URL, getAuthHeaders()), axios.get(`${USER_API_URL}/role/doctors`, getAuthHeaders())]);
+
+      const formattedAppointments = appsRes.data.map((app) => ({
         ...app,
         date: format(new Date(app.dateTime), "yyyy-MM-dd"),
-        time: format(new Date(app.dateTime), "h:mm a"),
-        // Use the populated names for display
-        patientDisplayName: app.patientName || (app.patient ? app.patient.name : 'Unknown Patient'),
-        doctorDisplayName: app.doctorName || (app.doctor ? app.doctor.name : 'Unknown Doctor')
+        time: format(new Date(app.dateTime), "HH:mm"),
+        patientDisplayName: app.patient?.name || "Unknown Patient",
+        doctorDisplayName: app.doctor?.name || "Unknown Doctor",
       }));
+
       setAppointments(formattedAppointments);
+      setPatientList(patientsRes.data);
+      setDoctorList(doctorsRes.data);
     } catch (error) {
-      console.error("Failed to fetch appointments:", error);
-      toast.error("Failed to fetch appointments.");
-    }
-  };
-
-  const fetchPatientList = async () => {
-    try {
-      const response = await axios.get(PATIENT_API_URL, getAuthHeaders());
-      setPatientList(response.data);
-    } catch (error) {
-      console.error("Failed to fetch patient list:", error);
-      toast.error("Could not load patient list.");
-    }
-  };
-
-  // New function to fetch doctors
-  const fetchDoctorList = async () => {
-    try {
-      const response = await axios.get(`${USER_API_URL}/role/doctors`, getAuthHeaders());
-      setDoctorList(response.data);
-    } catch (error) {
-      console.error("Failed to fetch doctor list:", error);
-      toast.error("Could not load doctor list.");
+      console.error("Failed to fetch data:", error);
+      toast.error("Failed to load schedule data.");
     }
   };
 
   useEffect(() => {
-    fetchAppointments();
-    fetchPatientList();
-    fetchDoctorList(); // Add this to fetch doctors on component mount
+    fetchData();
   }, []);
 
-  // --- CRUD Handlers (largely unchanged) ---
   const handleAddAppointment = async (e) => {
     e.preventDefault();
     if (!newAppointment.dateTime || !newAppointment.doctor || !newAppointment.patient) {
@@ -89,7 +133,7 @@ const AppointmentSchedule = () => {
       toast.success("Appointment successfully added!");
       setShowAddForm(false);
       setNewAppointment({ patient: "", doctor: "", dateTime: "", notes: "" });
-      fetchAppointments();
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not add appointment.");
     }
@@ -102,7 +146,7 @@ const AppointmentSchedule = () => {
       toast.success("Appointment successfully updated!");
       setIsEditing(false);
       setSelectedAppointment(null);
-      fetchAppointments();
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not update appointment.");
     }
@@ -115,7 +159,7 @@ const AppointmentSchedule = () => {
         toast.success("Appointment successfully deleted!");
         setSelectedAppointment(null);
         setIsEditing(false);
-        fetchAppointments();
+        fetchData();
       } catch (error) {
         toast.error(error.response?.data?.message || "Could not delete appointment.");
       } finally {
@@ -125,7 +169,6 @@ const AppointmentSchedule = () => {
     }
   };
 
-  // --- UI Handlers ---
   const handleOpenDeleteModal = (appointmentId) => {
     setAppointmentToDelete(appointmentId);
     setDeleteModalOpen(true);
@@ -133,135 +176,71 @@ const AppointmentSchedule = () => {
 
   const handleEditClick = () => {
     const formattedDateTime = selectedAppointment.dateTime ? new Date(new Date(selectedAppointment.dateTime).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
-    setEditingData({ 
-      ...selectedAppointment, 
+    setEditingData({
+      ...selectedAppointment,
       dateTime: formattedDateTime,
-      // Set the ObjectId values for the form
-      patient: selectedAppointment.patient ? selectedAppointment.patient._id || selectedAppointment.patient : "",
-      doctor: selectedAppointment.doctor ? selectedAppointment.doctor._id || selectedAppointment.doctor : ""
+      patient: selectedAppointment.patient?._id,
+      doctor: selectedAppointment.doctor?._id,
     });
     setIsEditing(true);
   };
 
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditingData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // --- Searchable Patient Dropdown Component ---
-  const SearchablePatientInput = ({ value, onChange, patientList, displayValue }) => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [isDropdownOpen, setDropdownOpen] = useState(false);
-    const wrapperRef = useRef(null);
-
-    useEffect(() => {
-      // If we have a displayValue (for editing), use it, otherwise try to find the patient name by ID
-      if (displayValue) {
-        setSearchTerm(displayValue);
-      } else if (value && patientList.length > 0) {
-        const patient = patientList.find(p => p._id === value);
-        setSearchTerm(patient ? patient.name : "");
-      } else {
-        setSearchTerm("");
-      }
-    }, [value, displayValue, patientList]);
-
-    useEffect(() => {
-      function handleClickOutside(event) {
-        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-          setDropdownOpen(false);
-        }
-      }
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
-
-    const filteredPatients = patientList.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.nik.includes(searchTerm));
-
-    const handleInputChange = (e) => {
-      setSearchTerm(e.target.value);
-      // Clear the selected patient ID when user types
-      const syntheticEvent = { target: { name: "patient", value: "" } };
-      onChange(syntheticEvent);
-      setDropdownOpen(true);
-    };
-
-    const handleSelectPatient = (patient) => {
-      const syntheticEvent = { target: { name: "patient", value: patient._id } };
-      onChange(syntheticEvent);
-      setSearchTerm(patient.name);
-      setDropdownOpen(false);
-    };
-
-    return (
-      <div className="relative" ref={wrapperRef}>
-        <input type="text" id="patientName" name="patient" value={searchTerm} onChange={handleInputChange} onFocus={() => setDropdownOpen(true)} autoComplete="off" className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
-        {isDropdownOpen && filteredPatients.length > 0 && (
-          <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto shadow-lg">
-            {filteredPatients.map((p) => (
-              <div key={p._id} onClick={() => handleSelectPatient(p)} className="p-2 hover:bg-blue-100 cursor-pointer">
-                <p className="font-semibold">{p.name}</p>
-                <p className="text-sm text-gray-500">NIK: {p.nik}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const goToNextMonth = () => setCurrentDate((prevDate) => addMonths(prevDate, 1));
   const goToPreviousMonth = () => setCurrentDate((prevDate) => subMonths(prevDate, 1));
+  const goToToday = () => setCurrentDate(new Date());
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
-  const startingDayIndex = getDay(firstDayOfMonth);
-  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const daysInMonth = eachDayOfInterval({ start: startOfWeek(firstDayOfMonth), end: endOfWeek(lastDayOfMonth) });
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
     <>
-      <div className="min-h-screen">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Admin - Appointment Schedule</h1>
-          <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-            {showAddForm ? "×" : "Add New Appointment"}
+      <div className="p-8 bg-gray-50 min-h-screen">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800">Appointment Schedule</h1>
+            <p className="text-gray-500 mt-1">Manage and view all patient appointments.</p>
+          </div>
+          <button onClick={() => setShowAddForm(!showAddForm)} className="mt-4 sm:mt-0 flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-sm">
+            <Plus size={20} />
+            {showAddForm ? "Cancel" : "New Appointment"}
           </button>
-        </div>
+        </header>
 
         {showAddForm && (
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 className="text-lg font-semibold text-gray-700 mb-4">Add Appointment</h2>
-            <form onSubmit={handleAddAppointment}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label htmlFor="patientName" className="mb-1 text-sm font-medium text-gray-600">
-                    Patient's Name
-                  </label>
-                  <SearchablePatientInput value={newAppointment.patient} onChange={(e) => setNewAppointment((prev) => ({ ...prev, patient: e.target.value }))} patientList={patientList} />
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Add New Appointment</h2>
+            <form onSubmit={handleAddAppointment} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-600">Patient</label>
+                  <SearchableInput
+                    value={newAppointment.patient}
+                    onChange={(e) => setNewAppointment((prev) => ({ ...prev, patient: e.target.value }))}
+                    itemList={patientList}
+                    displayKey="name"
+                    placeholder="Search patient by name or NIK"
+                    name="patient"
+                  />
                 </div>
-                <div className="flex flex-col">
-                  <label htmlFor="doctor" className="mb-1 text-sm font-medium text-gray-600">
-                    Doctor
-                  </label>
-                  <select id="doctor" name="doctor" value={newAppointment.doctor} onChange={(e) => setNewAppointment((prev) => ({ ...prev, doctor: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-600">Doctor</label>
+                  <select name="doctor" value={newAppointment.doctor} onChange={(e) => setNewAppointment((prev) => ({ ...prev, doctor: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white" required>
                     <option value="" disabled>
                       Select a doctor
                     </option>
-                    {doctorList.map((doctor) => (
-                      <option key={doctor._id} value={doctor._id}>
-                        {doctor.name}
+                    {doctorList.map((doc) => (
+                      <option key={doc._id} value={doc._id}>
+                        {doc.name}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col">
-                  <label htmlFor="dateTime" className="mb-1 text-sm font-medium text-gray-600">
-                    Date & Time
-                  </label>
+                <div className="md:col-span-2">
+                  <label className="block mb-1 text-sm font-medium text-gray-600">Date & Time</label>
                   <input
                     type="datetime-local"
-                    id="dateTime"
                     name="dateTime"
                     value={newAppointment.dateTime}
                     onChange={(e) => setNewAppointment((prev) => ({ ...prev, dateTime: e.target.value }))}
@@ -269,22 +248,13 @@ const AppointmentSchedule = () => {
                     required
                   />
                 </div>
-                <div className="flex flex-col">
-                  <label htmlFor="notes" className="mb-1 text-sm font-medium text-gray-600">
-                    Notes
-                  </label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    value={newAppointment.notes}
-                    onChange={(e) => setNewAppointment((prev) => ({ ...prev, notes: e.target.value }))}
-                    rows="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  ></textarea>
+                <div className="md:col-span-2">
+                  <label className="block mb-1 text-sm font-medium text-gray-600">Notes (Optional)</label>
+                  <textarea name="notes" value={newAppointment.notes} onChange={(e) => setNewAppointment((prev) => ({ ...prev, notes: e.target.value }))} rows="3" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                 </div>
               </div>
-              <div className="flex justify-end mt-6">
-                <button type="submit" className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+              <div className="flex justify-end mt-4">
+                <button type="submit" className="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700 transition">
                   Add Appointment
                 </button>
               </div>
@@ -292,36 +262,41 @@ const AppointmentSchedule = () => {
           </div>
         )}
 
-        <div className="bg-white rounded-lg drop-shadow-xl p-4 mt-4">
-          <div className="flex items-center justify-between mb-4 bg-blue-600">
-            <button onClick={goToPreviousMonth} className="p-2 rounded-full hover:bg-gray-100">
-              <ChevronLeft className="w-6 h-6 text-blue-200" />
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <button onClick={goToPreviousMonth} className="p-2 rounded-full hover:bg-gray-100">
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <h2 className="text-xl font-semibold text-gray-800 w-40 text-center">{format(currentDate, "MMMM yyyy")}</h2>
+              <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100">
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <button onClick={goToToday} className="px-4 py-2 text-sm font-semibold text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50">
+              Today
             </button>
-            <h2 className="text-xl font-semibold text-white px-20 py-4 rounded-lg">{format(currentDate, "MMMM yyyy")}</h2>
-            <button onClick={goToNextMonth} className="p-2 rounded-full hover:bg-gray-100">
-              <ChevronRight className="w-6 h-6 text-blue-200" />
-            </button>
-          </div>
-          <div className="grid grid-cols-7 text-center font-semibold text-gray-600 border-b mb-2 pb-2">
-            {daysOfWeek.map((day) => (
-              <div key={day}>{day}</div>
-            ))}
           </div>
           <div className="grid grid-cols-7">
-            {Array.from({ length: startingDayIndex }).map((_, index) => (
-              <div key={`empty-${index}`} className="border-r border-b"></div>
+            {daysOfWeek.map((day) => (
+              <div key={day} className="text-center font-semibold text-gray-500 text-sm py-3 border-b">
+                {day}
+              </div>
             ))}
             {daysInMonth.map((day, index) => {
               const dayAppointments = appointments.filter((app) => app.date === format(day, "yyyy-MM-dd"));
+              const isCurrentMonth = format(day, "M") === format(currentDate, "M");
               return (
-                <div key={index} className="border-r border-b p-2 h-36 relative">
-                  <div className="flex justify-center">
-                    <div className={`w-8 h-8 flex items-center justify-center rounded-full font-medium ${isToday(day) ? "bg-blue-600 text-white" : "text-gray-800"}`}>{format(day, "d")}</div>
-                  </div>
-                  <div className="mt-1 space-y-1 overflow-y-auto max-h-24">
+                <div key={index} className={`border-b border-r p-2 h-36 flex flex-col ${isCurrentMonth ? "" : "bg-gray-50"}`}>
+                  <span className={`self-end w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ${isToday(day) ? "bg-blue-600 text-white" : isCurrentMonth ? "text-gray-800" : "text-gray-400"}`}>
+                    {format(day, "d")}
+                  </span>
+                  {/* CHANGE: Removed slice and max-height to allow scrolling */}
+                  <div className="mt-1 space-y-1 overflow-y-auto flex-grow">
                     {dayAppointments.map((app) => (
-                      <div key={app._id} onClick={() => setSelectedAppointment(app)} className="bg-blue-500 text-white text-xs rounded-md p-1 truncate cursor-pointer hover:bg-blue-700">
-                        {app.patientDisplayName} - {app.time}
+                      <div key={app._id} onClick={() => setSelectedAppointment(app)} className="bg-blue-100 text-blue-800 text-xs rounded p-1 truncate cursor-pointer hover:bg-blue-200">
+                        <p className="font-semibold">{app.patientDisplayName}</p>
+                        <p>{format(new Date(app.dateTime), "p")}</p>
                       </div>
                     ))}
                   </div>
@@ -332,66 +307,59 @@ const AppointmentSchedule = () => {
         </div>
 
         {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+            onClick={() => {
+              setSelectedAppointment(null);
+              setIsEditing(false);
+            }}
+          >
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => {
                   setSelectedAppointment(null);
                   setIsEditing(false);
                 }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-800"
               >
                 <X size={24} />
               </button>
               {isEditing ? (
                 <form onSubmit={handleUpdateAppointment}>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">Edit Appointment</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="flex flex-col">
-                      <label htmlFor="edit-patient" className="mb-1 text-sm font-medium text-gray-600">
-                        Patient's Name
-                      </label>
-                      <SearchablePatientInput 
-                        value={editingData.patient} 
-                        onChange={handleEditInputChange} 
-                        patientList={patientList}
-                        displayValue={selectedAppointment.patientDisplayName}
-                      />
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Edit Appointment</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-600">Patient</label>
+                      <SearchableInput value={editingData.patient} onChange={(e) => setEditingData((prev) => ({ ...prev, patient: e.target.value }))} itemList={patientList} displayKey="name" placeholder="Search patient" name="patient" />
                     </div>
-                    <div className="flex flex-col">
-                      <label htmlFor="edit-doctor" className="mb-1 text-sm font-medium text-gray-600">
-                        Doctor
-                      </label>
-                      <select id="edit-doctor" name="doctor" value={editingData.doctor} onChange={handleEditInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                        {doctorList.map((doctor) => (
-                          <option key={doctor._id} value={doctor._id}>
-                            {doctor.name}
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-600">Doctor</label>
+                      <select name="doctor" value={editingData.doctor} onChange={(e) => setEditingData((prev) => ({ ...prev, doctor: e.target.value }))} className="w-full px-3 py-2 border rounded-md" required>
+                        {doctorList.map((doc) => (
+                          <option key={doc._id} value={doc._id}>
+                            {doc.name}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <div className="flex flex-col col-span-2">
-                      <label htmlFor="edit-dateTime" className="mb-1 text-sm font-medium text-gray-600">
-                        Date & Time
-                      </label>
-                      <input type="datetime-local" id="edit-dateTime" name="dateTime" value={editingData.dateTime} onChange={handleEditInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-600">Date & Time</label>
+                      <input type="datetime-local" name="dateTime" value={editingData.dateTime} onChange={(e) => setEditingData((prev) => ({ ...prev, dateTime: e.target.value }))} className="w-full px-3 py-2 border rounded-md" required />
                     </div>
-                    <div className="flex flex-col col-span-2">
-                      <label htmlFor="edit-notes" className="mb-1 text-sm font-medium text-gray-600">
-                        Notes
-                      </label>
-                      <textarea id="edit-notes" name="notes" value={editingData.notes} onChange={handleEditInputChange} rows="3" className="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-600">Notes</label>
+                      <textarea name="notes" value={editingData.notes} onChange={(e) => setEditingData((prev) => ({ ...prev, notes: e.target.value }))} rows="3" className="w-full px-3 py-2 border rounded-md"></textarea>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <button type="button" onClick={() => handleOpenDeleteModal(selectedAppointment._id)} className="flex items-center gap-2 bg-red-100 text-red-600 font-semibold px-4 py-2 rounded-lg hover:bg-red-200 transition">
+                  <div className="flex justify-between items-center mt-6">
+                    <button type="button" onClick={() => handleOpenDeleteModal(selectedAppointment._id)} className="flex items-center gap-2 text-red-600 font-semibold hover:text-red-800">
                       <Trash2 size={16} /> Delete
                     </button>
-                    <div className="flex gap-4">
-                      <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setIsEditing(false)} className="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300">
                         Cancel
                       </button>
-                      <button type="submit" className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                      <button type="submit" className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700">
                         Save Changes
                       </button>
                     </div>
@@ -399,31 +367,33 @@ const AppointmentSchedule = () => {
                 </form>
               ) : (
                 <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4 flex-grow">Appointment Details</h3>
-                  </div>
-                  <div className="space-y-4 text-gray-700">
-                    <p>
-                      <strong>Date:</strong> {format(parseISO(selectedAppointment.date), "EEEE, MMMM d, yyyy")}
-                    </p>
-                    <p>
-                      <strong>Time:</strong> {selectedAppointment.time}
-                    </p>
-                    <p>
-                      <strong>Patient:</strong> {selectedAppointment.patientDisplayName}
-                    </p>
-                    <p>
-                      <strong>Doctor:</strong> {selectedAppointment.doctorDisplayName}
-                    </p>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">{selectedAppointment.patientDisplayName}</h3>
+                  <div className="space-y-3 text-gray-700">
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon size={18} className="text-gray-400" />
+                      <span>{format(parseISO(selectedAppointment.date), "EEEE, MMMM d, yyyy")}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock size={18} className="text-gray-400" />
+                      <span>{format(new Date(selectedAppointment.dateTime), "p")}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <User size={18} className="text-gray-400" />
+                      <span>{selectedAppointment.patientDisplayName}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Stethoscope size={18} className="text-gray-400" />
+                      <span>{selectedAppointment.doctorDisplayName}</span>
+                    </div>
                     <div>
                       <strong className="block mb-1">Notes:</strong>
                       <p className="bg-gray-50 p-3 rounded-md border text-sm">{selectedAppointment.notes || "No notes provided."}</p>
                     </div>
-                    <div className="flex justify-end pt-4">
-                      <button onClick={handleEditClick} className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                        <Edit size={16} /> Edit Appointment
-                      </button>
-                    </div>
+                  </div>
+                  <div className="flex justify-end pt-6 mt-4 border-t">
+                    <button onClick={handleEditClick} className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700">
+                      <Edit size={16} /> Edit Appointment
+                    </button>
                   </div>
                 </div>
               )}
@@ -431,7 +401,6 @@ const AppointmentSchedule = () => {
           </div>
         )}
       </div>
-
       <ConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Delete Appointment" confirmText="Delete">
         Are you sure you want to delete this appointment? This action cannot be undone.
       </ConfirmationModal>
