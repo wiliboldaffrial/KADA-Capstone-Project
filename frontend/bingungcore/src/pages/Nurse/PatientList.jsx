@@ -8,6 +8,7 @@ import { Search, ArrowDownAZ, ArrowUpAZ, ChevronDown, Stethoscope } from "lucide
 const APPOINTMENTS_URL = `${process.env.REACT_APP_API_URL}/api/appointments`;
 const CHECKUPS_URL = `${process.env.REACT_APP_API_URL}/api/checkups`;
 
+// DoctorCheckupDetail component remains the same
 const DoctorCheckupDetail = ({ checkup }) => {
   if (!checkup) {
     return (
@@ -44,6 +45,7 @@ const DoctorCheckupDetail = ({ checkup }) => {
     </div>
   );
 };
+
 
 const PatientList = () => {
   const [appointments, setAppointments] = useState([]);
@@ -167,36 +169,40 @@ const PatientList = () => {
   return (
     <>
       <ConfirmationModal isOpen={false} onClose={() => {}} onConfirm={() => {}} />
-      <main className="flex-1 p-8 bg-gray-50 min-h-screen">
+      {/* */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+        {/* */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800">Patient Appointments</h1>
-            <p className="text-gray-500 mt-1">Hello Nurse {nurseName}, manage today's patient checkups.</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Patient Appointments</h1>
+            <p className="text-gray-500 mt-1">Hello Nurse {nurseName}, manage patient checkups.</p>
           </div>
-          <div className="relative mt-4 sm:mt-0">
+          <div className="relative mt-4 sm:mt-0 w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Search patient..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border border-gray-300 bg-white px-4 py-2 pl-10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+              className="border border-gray-300 bg-white px-4 py-2 pl-10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow w-full"
             />
           </div>
         </header>
 
-        <div className="flex justify-between items-center mb-6 bg-white p-3 rounded-lg shadow-sm border">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-            <button onClick={() => setFilter("all")} className={`px-4 py-1.5 rounded-md text-sm font-medium ${filter === "all" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
+        {/* */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-3 rounded-lg shadow-sm border gap-4">
+          {/* */}
+          <div className="flex flex-wrap items-center justify-center gap-1 bg-gray-100 p-1 rounded-lg">
+            <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-md text-sm font-medium ${filter === "all" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
               All
             </button>
-            <button onClick={() => setFilter("today")} className={`px-4 py-1.5 rounded-md text-sm font-medium ${filter === "today" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
+            <button onClick={() => setFilter("today")} className={`px-3 py-1.5 rounded-md text-sm font-medium ${filter === "today" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
               Today
             </button>
-            <button onClick={() => setFilter("week")} className={`px-4 py-1.5 rounded-md text-sm font-medium ${filter === "week" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
+            <button onClick={() => setFilter("week")} className={`px-3 py-1.5 rounded-md text-sm font-medium ${filter === "week" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
               This Week
             </button>
-            <button onClick={() => setFilter("month")} className={`px-4 py-1.5 rounded-md text-sm font-medium ${filter === "month" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
+            <button onClick={() => setFilter("month")} className={`px-3 py-1.5 rounded-md text-sm font-medium ${filter === "month" ? "bg-white text-gray-800 shadow-sm" : "bg-transparent text-gray-600"}`}>
               This Month
             </button>
           </div>
@@ -218,25 +224,26 @@ const PatientList = () => {
             return (
               <div key={app._id} className="bg-white rounded-xl shadow-sm border">
                 <div className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50" onClick={() => handleToggleAppointment(app)}>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 flex-grow min-w-0"> {/* */}
                     <div className="w-12 h-12 bg-cyan-100 text-cyan-700 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg">{patient?.name?.charAt(0) || "P"}</div>
-                    <div>
-                      <p className="font-bold text-lg text-gray-900">{patient?.name}</p>
+                    <div className="min-w-0"> {/* */}
+                      <p className="font-bold text-lg text-gray-900 truncate">{patient?.name}</p>
                       <p className="text-sm text-gray-500">Scheduled for {format(new Date(app.dateTime), "dd MMMM, HH:mm")}</p>
                     </div>
                   </div>
-                  <button className="text-blue-600 transition-transform duration-300" style={{ transform: isSelected ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  <button className="text-blue-600 transition-transform duration-300 ml-4" style={{ transform: isSelected ? "rotate(180deg)" : "rotate(0deg)" }}>
                     <ChevronDown />
                   </button>
                 </div>
 
                 {isSelected && (
-                  <div className="border-t p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+                  <div className="border-t p-4 md:p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
                     <div className="lg:col-span-3 space-y-6">
                       <div className="bg-white border p-4 rounded-lg">
                         <h3 className="font-bold text-lg mb-4">Initial Checkup</h3>
                         <form onSubmit={handleAddInitialCheckup} className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                             <input name="height" value={initialCheckupForm.height || ""} onChange={handleFormChange} placeholder="Height (cm)" className="p-2 border rounded-md w-full" />
                             <input name="weight" value={initialCheckupForm.weight || ""} onChange={handleFormChange} placeholder="Weight (kg)" className="p-2 border rounded-md w-full" />
                             <input name="bloodPressure" value={initialCheckupForm.bloodPressure || ""} onChange={handleFormChange} placeholder="Blood Pressure" className="p-2 border rounded-md w-full" />
@@ -259,9 +266,9 @@ const PatientList = () => {
                         <div className="space-y-3 max-h-48 overflow-y-auto">
                           {doctorHistory.length > 0 ? (
                             doctorHistory.map((ch) => (
-                              <div key={ch._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                              <div key={ch._id} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-gray-50 rounded-md gap-2">
                                 <p className="text-sm font-medium text-gray-700">Diagnosis on {format(new Date(ch.date), "dd MMM yyyy")}</p>
-                                <button onClick={() => setActiveDoctorCheckup(ch)} className="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full hover:bg-blue-200">
+                                <button onClick={() => setActiveDoctorCheckup(ch)} className="bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full hover:bg-blue-200 self-start sm:self-center">
                                   View Detail
                                 </button>
                               </div>
