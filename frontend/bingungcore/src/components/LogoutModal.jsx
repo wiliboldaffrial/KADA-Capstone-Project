@@ -1,15 +1,15 @@
 // src/components/LogoutModal.jsx
-
 import React from "react";
+import ReactDOM from "react-dom";
 import { LogOut } from "lucide-react";
 
 const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     // Modal Overlay
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50"
+      className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-[9999]"
       onClick={onClose} // Close modal if overlay is clicked
     >
       {/* Modal Content */}
@@ -28,16 +28,25 @@ const LogoutModal = ({ isOpen, onClose, onConfirm }) => {
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4">
-          <button onClick={onClose} className="w-full px-4 py-2.5 rounded-lg text-blue-600 font-semibold hover:bg-gray-100 transition-colors">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2.5 rounded-lg text-blue-600 font-semibold hover:bg-gray-100 transition-colors"
+          >
             Cancel
           </button>
-          <button onClick={onConfirm} className="w-full px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
+          <button
+            onClick={onConfirm}
+            className="w-full px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
+          >
             Logout
           </button>
         </div>
       </div>
     </div>
   );
+
+  // ✅ Render outside sidebar using portal
+  return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default LogoutModal;
