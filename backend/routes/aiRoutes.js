@@ -5,10 +5,6 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
-// AI Medical Analysis endpoint
-// Enhanced AI analysis endpoint in aiRoutes.js
-// Replace the existing /analyze-checkup route with this improved version:
-
 router.post('/analyze-checkup', async (req, res) => {
     try {
         const { patientInfo, checkupDetails, symptoms, vitalSigns, doctorNotes } = req.body;

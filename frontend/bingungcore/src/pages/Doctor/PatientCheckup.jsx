@@ -1170,26 +1170,145 @@ const PatientCheckup = () => {
 
                       {aiAnalysisResult || selectedCheckup.aiResponse ? (
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
-                          {(aiAnalysisResult?.possibleDiagnoses || selectedCheckup.aiResponse?.possibleDiagnoses) && (
-                            <div>
-                              <span className="font-medium text-purple-800">Possible Diagnoses:</span>
-                              <ul className="text-purple-700 mt-1 list-disc list-inside">
-                                {(aiAnalysisResult?.possibleDiagnoses || selectedCheckup.aiResponse?.possibleDiagnoses).map((diagnosis, index) => (
-                                  <li key={index}>{diagnosis}</li>
-                                ))}
-                              </ul>
-                              {(aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation) && (
-                                <p className="text-purple-600 text-sm mt-1">
-                                  {aiAnalysisResult?.confidenceExplanation || selectedCheckup.aiResponse?.confidenceExplanation}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center pt-3 border-t">
+                          {/* Render AI analysis data */}
+                          {(() => {
+                            const data = aiAnalysisResult || selectedCheckup.aiResponse;
+                            const {
+                              possibleDiagnoses,
+                              recommendedActions,
+                              riskFactors,
+                              followUpRecommendations,
+                              confidence,
+                              confidenceExplanation,
+                              additionalConsiderations,
+                              analyzedAt,
+                              dataSource
+                            } = data || {};
+
+                            return (
+                              <>
+                                {/* Possible Diagnoses */}
+                                {possibleDiagnoses && possibleDiagnoses.length > 0 && (
+                                  <div>
+                                    <span className="font-medium text-purple-800 block mb-2">
+                                      🔍 Possible Diagnoses:
+                                    </span>
+                                    <ul className="text-purple-700 list-disc list-inside space-y-1">
+                                      {possibleDiagnoses.map((diagnosis, index) => (
+                                        <li key={index} className="pl-2">{diagnosis}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Recommended Actions */}
+                                {recommendedActions && (
+                                  <div>
+                                    <span className="font-medium text-purple-800 block mb-2">
+                                      📋 Recommended Actions:
+                                    </span>
+                                    <div className="text-purple-700 bg-purple-100 p-3 rounded-md">
+                                      <p className="whitespace-pre-wrap">{recommendedActions}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Risk Factors */}
+                                {riskFactors && riskFactors.length > 0 && (
+                                  <div>
+                                    <span className="font-medium text-purple-800 block mb-2">
+                                      ⚠️ Risk Factors:
+                                    </span>
+                                    <ul className="text-purple-700 list-disc list-inside space-y-1">
+                                      {riskFactors.map((factor, index) => (
+                                        <li key={index} className="pl-2">{factor}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Follow-Up Recommendations */}
+                                {followUpRecommendations && (
+                                  <div>
+                                    <span className="font-medium text-purple-800 block mb-2">
+                                      📅 Follow-Up Recommendations:
+                                    </span>
+                                    <div className="text-purple-700 bg-purple-100 p-3 rounded-md">
+                                      <p className="whitespace-pre-wrap">{followUpRecommendations}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Additional Considerations */}
+                                {additionalConsiderations && (
+                                  <div>
+                                    <span className="font-medium text-purple-800 block mb-2">
+                                      💡 Additional Considerations:
+                                    </span>
+                                    <div className="text-purple-700 bg-purple-100 p-3 rounded-md">
+                                      <p className="whitespace-pre-wrap">{additionalConsiderations}</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Confidence & Metadata */}
+                                <div className="pt-3 border-t border-purple-300">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    {/* Confidence Level */}
+                                    <div>
+                                      <span className="font-medium text-purple-800 block mb-1">
+                                        📊 Confidence Level:
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex-1 bg-purple-200 rounded-full h-2">
+                                          <div
+                                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${confidence || 0}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="text-purple-700 font-medium">
+                                          {confidence || 0}%
+                                        </span>
+                                      </div>
+                                      {confidenceExplanation && (
+                                        <p className="text-purple-600 text-xs mt-1">
+                                          {confidenceExplanation}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    {/* Metadata */}
+                                    <div className="text-xs text-purple-600 space-y-1">
+                                      {dataSource && (
+                                        <div>
+                                          <span className="font-medium">Data Source:</span> {
+                                            dataSource === 'nurse_imported' ? '👩‍⚕️ Nurse Import' :
+                                            dataSource === 'direct_entry' ? '👨‍⚕️ Direct Entry' :
+                                            dataSource
+                                          }
+                                        </div>
+                                      )}
+                                      {analyzedAt && (
+                                        <div>
+                                          <span className="font-medium">Analyzed:</span> {formatDateTime(analyzedAt)}
+                                        </div>
+                                      )}
+                                      <div>
+                                        <span className="font-medium">AI Model:</span> Gemini 1.5 Flash
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
+
+                          {/* Action Buttons */}
+                          <div className="flex justify-between items-center pt-3 border-t border-purple-300">
                             <button
                               onClick={handleAiAnalysis}
                               disabled={aiAnalysisLoading}
-                              className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm"
+                              className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm disabled:opacity-50"
                             >
                               {aiAnalysisLoading ? (
                                 <>
@@ -1226,10 +1345,13 @@ const PatientCheckup = () => {
                             </button>
                           </div>
 
-                          <div className="border-t pt-3">
+                          {/* Disclaimer */}
+                          <div className="border-t border-purple-300 pt-3">
                             <div className="flex items-center gap-2 text-xs text-purple-600">
                               <AlertCircle className="w-4 h-4" />
-                              <span>This AI analysis is for reference only. Always use clinical judgment for final diagnosis and treatment decisions.</span>
+                              <span>
+                                This AI analysis is for reference only. Always use clinical judgment for final diagnosis and treatment decisions.
+                              </span>
                             </div>
                           </div>
                         </div>
