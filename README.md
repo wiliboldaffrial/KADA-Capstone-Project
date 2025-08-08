@@ -30,17 +30,43 @@ A modern, responsive hospital management dashboard built with React and Tailwind
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/wiliboldaffrial/KADA-Capstone-Project
+   git clone [https://github.com/wiliboldaffrial/KADA-Capstone-Project]
    cd KADA-Capstone-Project
-
-   # Running Backend
-   cd backend
-   npm install
-   node server.js
-
-   #Running Frontend
+   ```
+   
+2. Frontend Installation & Startup
+   ```bash
    cd frontend/bingungcore
    npm install
    npm start
    ```
-   You should see the App running in your browser at http://localhost:3000/
+   
+3. Backend Installation & Startup
+   ```bash
+   cd backend
+   npm install
+   node server
+   ```
+
+You should able to see you webapp running on localhost:3000
+
+## ENV Variables
+1. inside frontend/bingungcore root, create `.env` file and store your React app API URL
+     ```bash
+     REACT_APP_API_URL=your_react_app_api_url
+     ```
+1. inside backend root, create `.env` file and store your Mongo URI and Google Generative AI configuration
+     ```bash
+      MONGO_URI=your_mongo_uri
+      PORT=5000
+      
+      REACT_APP_API_URL=your_react_app_api_url
+      
+      # Google Generative AI Configuration
+      GOOGLE_AI_API_KEY=your_google_ai_api_key
+      
+      # Optional: AI Service Configuration
+      AI_MODEL=gemini-1.5-flash
+      AI_MAX_RETRIES=3
+      AI_TIMEOUT=30000
+     ```
