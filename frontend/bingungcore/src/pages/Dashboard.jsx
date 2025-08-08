@@ -144,29 +144,42 @@ const Dashboard = () => {
 
   return (
     <>
-      {latestAnnouncement && (
-        <div className="bg-white border rounded-full px-4 py-2 w-full mb-4">
-          <div className="flex items-center justify-between">
-            <p>
-              <span className={`font-bold ${latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""}`}>{latestAnnouncement.title}</span>
+    {latestAnnouncement && (
+      <div className="bg-white border rounded-full px-4 py-2 w-full mb-4 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left side: title, author, content */}
+          <div className="flex flex-col min-w-0">
+            <span
+              className={`font-bold ${
+                latestAnnouncement.urgency === "urgent" ? "text-red-500" : ""
+              }`}
+            >
+              {latestAnnouncement.title}
+            </span>
 
-              {latestAnnouncement.author && (
-                <span className="text-sm text-gray-500">
-                  {authorRoleMap[latestAnnouncement.author] && `${authorRoleMap[latestAnnouncement.author]}`} {authorNameMap[latestAnnouncement.author] || "Loading..."}:
-                </span>
-              )}
+            {latestAnnouncement.author && (
+              <span className="text-xs text-gray-500">
+                {authorRoleMap[latestAnnouncement.author] || "Unknown Role"}{" "}
+                {authorNameMap[latestAnnouncement.author] || "Loading..."}
+              </span>
+            )}
 
-              <span className="text-sm text-gray-600 ml-2 truncate">{latestAnnouncement.content}</span>
-            </p>
+            <span className="text-sm text-gray-600 truncate">
+              {latestAnnouncement.content}
+            </span>
+          </div>
 
-            <div className="flex items-center flex-shrink-0 ml-4">
-              <span className="text-sm text-gray-500 pr-3">{format(new Date(latestAnnouncement.createdAt), "p")}</span>
-
-              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-            </div>
+          {/* Right side: time + status dot */}
+          <div className="flex items-center flex-shrink-0 gap-2">
+            <span className="text-sm text-gray-500">
+              {format(new Date(latestAnnouncement.createdAt), "p")}
+            </span>
+            <span className="w-3 h-3 bg-green-500 rounded-full"></span>
           </div>
         </div>
-      )}
+      </div>
+    )}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
