@@ -30,8 +30,17 @@ A modern, responsive hospital management dashboard built with React and Tailwind
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/clinic-dashboard.git
-   cd frontend/bingungcore
+   git clone https://github.com/wiliboldaffrial/KADA-Capstone-Project
+   cd KADA-Capstone-Project
 
+   # Running Backend
+   cd backend
    npm install
+   node server.js
+
+   #Running Frontend
+   cd frontend/bingungcore
+   npm install
+   npm start
    ```
+   You should see the App running in your browser at http://localhost:3000/
